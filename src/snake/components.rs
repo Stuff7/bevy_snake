@@ -1,4 +1,4 @@
-use crate::world::styles::create_cell_bundle;
+use crate::world::{styles::create_cell_bundle, CELL_WIDTH};
 
 use super::PLAYER_COLOR;
 use bevy::prelude::{Commands, Component, Entity, Input, KeyCode};
@@ -17,6 +17,16 @@ pub enum Direction {
 }
 
 impl Direction {
+  pub(super) fn opposite(&self) -> Self {
+    use Direction::*;
+    match *self {
+      Bottom => Top,
+      Left => Right,
+      Right => Left,
+      Top => Bottom,
+    }
+  }
+
   pub(super) fn next_from_input(&self, keyboard_input: &Input<KeyCode>) -> Option<Self> {
     if self != &Direction::Bottom && keyboard_input.pressed(KeyCode::W) {
       Some(Direction::Top)
@@ -56,19 +66,14 @@ pub struct SnakeHead {
   pub(super) y: f32,
 }
 
-impl SnakeHead {
-  pub(super) fn spawn_and_create(
-    commands: &mut Commands,
-    x: f32,
-    y: f32,
-  ) -> (Entity, Self) {
-    (Self::spawn(commands, x, y), Self { x, y })
-  }
+#[derive(Debug, Component)]
+pub struct SnakeSegment;
 
+impl SnakeSegment {
   pub(super) fn spawn(commands: &mut Commands, x: f32, y: f32) -> Entity {
-    let mut entity_commands = commands.spawn_empty();
-    entity_commands.insert(create_cell_bundle(PLAYER_COLOR, x, y));
-    entity_commands.id()
+    commands
+      .spawn((SnakeSegment, create_cell_bundle(PLAYER_COLOR, x, y)))
+      .id()
   }
 }
 
@@ -76,8 +81,22 @@ impl SnakeHead {
 pub struct SnakeBody(VecDeque<Entity>);
 
 impl SnakeBody {
-  pub(super) fn new(entity: Entity) -> Self {
-    Self(vec![entity].into())
+  pub(super) fn new(commands: &mut Commands, head: SnakeHead, tail_length: usize) -> Self {
+    let entity = commands
+      .spawn((
+        head,
+        SnakeSegment,
+        create_cell_bundle(PLAYER_COLOR, head.x, head.y),
+      ))
+      .id();
+    let mut body = VecDeque::from([entity]);
+
+    body.extend(
+      (1..=tail_length)
+        .map(|i| SnakeSegment::spawn(commands, head.x - CELL_WIDTH * i as f32, head.y)),
+    );
+
+    Self(body)
   }
 
   pub(super) fn head(&self) -> Entity {
@@ -88,8 +107,16 @@ impl SnakeBody {
       .expect("SnakeBody should always have a head")
   }
 
+  pub(super) fn tail(&self) -> Entity {
+    self.0.back().copied().unwrap_or_else(|| self.head())
+  }
+
   pub(super) fn push_head(&mut self, entity: Entity) {
     self.0.push_front(entity)
+  }
+
+  pub(super) fn extend_tail(&mut self, tail_segments: impl IntoIterator<Item = Entity>) {
+    self.0.extend(tail_segments);
   }
 
   pub(super) fn pop_tail(&mut self) -> Option<Entity> {

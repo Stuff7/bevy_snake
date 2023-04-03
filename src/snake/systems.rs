@@ -1,11 +1,11 @@
+use super::{
+  components::{Direction, DirectionQueue, Player, SnakeBody, SnakeHead, SnakeSegment},
+  events::{BodySizeChange, Serpentine},
+  INITIAL_TAIL_LENGTH,
+};
 use crate::{
   food::{components::Food, events::FoodEaten},
   world::{CELL_HEIGHT, CELL_WIDTH},
-};
-
-use super::{
-  components::{Direction, DirectionQueue, Player, SnakeBody, SnakeHead},
-  events::BodySizeChange,
 };
 use bevy::{
   prelude::{
@@ -20,9 +20,11 @@ pub(super) fn snake_spawning(
   window: Query<&Window, With<PrimaryWindow>>,
 ) {
   let window = window.get_single().unwrap();
-  let (head_entity, head) =
-    SnakeHead::spawn_and_create(&mut commands, window.width() / 2., window.height() / 2.);
-  let body = SnakeBody::new(head_entity);
+  let head = SnakeHead {
+    x: window.width() / 2.,
+    y: window.height() / 2.,
+  };
+  let body = SnakeBody::new(&mut commands, head, INITIAL_TAIL_LENGTH);
 
   commands.spawn((Player, DirectionQueue::default(), body, head));
 }
@@ -43,6 +45,7 @@ pub(super) fn snake_steering(
 
 pub(super) fn snake_head_positioning(
   mut commands: Commands,
+  mut serpentine_writer: EventWriter<Serpentine>,
   mut snake_query: Query<
     (&mut DirectionQueue, &mut SnakeBody, &mut SnakeHead),
     With<Player>,
@@ -70,23 +73,28 @@ pub(super) fn snake_head_positioning(
   } else {
     commands.entity(old_head).insert(*player_head);
   }
+  serpentine_writer.send(Serpentine(Vec3::new(player_head.x, player_head.y, 0.)));
 }
 
 pub(super) fn snake_serpentining(
-  mut head_query: Query<(&SnakeHead, &mut Transform), Without<Player>>,
+  mut serpentine_reader: EventReader<Serpentine>,
+  mut head_query: Query<&mut Transform, With<SnakeHead>>,
 ) {
-  for (head, mut transform) in head_query.iter_mut() {
-    transform.translation.x = head.x;
-    transform.translation.y = head.y;
+  for Serpentine(head) in serpentine_reader.iter().copied() {
+    for mut transform in head_query.iter_mut() {
+      transform.translation.x = head.x;
+      transform.translation.y = head.y;
+    }
   }
 }
 
 pub(super) fn snake_resizing(
   mut commands: Commands,
   mut size_change_reader: EventReader<BodySizeChange>,
-  mut snake_query: Query<(&mut SnakeBody, &SnakeHead), With<Player>>,
+  mut snake_query: Query<(&mut SnakeBody, &DirectionQueue), With<Player>>,
+  snake_segment_query: Query<&Transform, With<SnakeSegment>>,
 ) {
-  let Ok((mut body, head)) = snake_query.get_single_mut() else {
+  let Ok((mut body, direction)) = snake_query.get_single_mut() else {
     return;
   };
   use BodySizeChange::*;
@@ -94,13 +102,21 @@ pub(super) fn snake_resizing(
     match event {
       Grow(size) => {
         if *size > 0 {
-          let x = head.x;
-          let y = head.y;
-          commands.entity(body.head()).remove::<SnakeHead>();
-          for _ in 0..*size {
-            body.push_head(SnakeHead::spawn(&mut commands, x, y));
-          }
-          commands.entity(body.head()).insert(*head);
+          let Ok(tail) = snake_segment_query.get(body.tail()) else { return; };
+          let tail = tail.translation;
+          let direction = direction.current.opposite();
+          let tail_segments = (1..=*size).map(|i| {
+            let w = CELL_WIDTH * i as f32;
+            let h = CELL_HEIGHT * i as f32;
+            let (x, y) = match direction {
+              Direction::Bottom => (tail.x, tail.y - h),
+              Direction::Right => (tail.x + w, tail.y),
+              Direction::Top => (tail.x, tail.y + h),
+              Direction::Left => (tail.x - w, tail.y),
+            };
+            SnakeSegment::spawn(&mut commands, x, y)
+          });
+          body.extend_tail(tail_segments);
         }
       }
       Shrink(size) => {
@@ -114,18 +130,32 @@ pub(super) fn snake_resizing(
 }
 
 pub(super) fn snake_eating(
+  mut serpentine_reader: EventReader<Serpentine>,
   mut food_eaten_writer: EventWriter<FoodEaten>,
-  snake_query: Query<&SnakeHead, With<Player>>,
   food_query: Query<&Transform, With<Food>>,
 ) {
-  let Ok(head) = snake_query.get_single() else { return; };
-  let Ok(food_transform) = food_query.get_single() else { return; };
+  for Serpentine(head) in serpentine_reader.iter().copied() {
+    let Ok(food_transform) = food_query.get_single() else { return; };
 
-  let distance = food_transform
-    .translation
-    .distance(Vec3::new(head.x, head.y, 0.));
+    let distance = food_transform.translation.distance(head);
 
-  if distance < CELL_WIDTH {
-    food_eaten_writer.send(FoodEaten);
+    if distance < CELL_WIDTH {
+      food_eaten_writer.send(FoodEaten);
+    }
+  }
+}
+
+pub(super) fn snake_dying(
+  mut serpentine_reader: EventReader<Serpentine>,
+  snake_segment_query: Query<&Transform, (With<SnakeSegment>, Without<SnakeHead>)>,
+) {
+  for Serpentine(head) in serpentine_reader.iter().copied() {
+    if snake_segment_query
+      .iter()
+      .any(|segment| segment.translation == head)
+    {
+      println!("GAME OVER!");
+      return;
+    }
   }
 }
