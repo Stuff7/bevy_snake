@@ -1,13 +1,8 @@
 use crate::world::{styles::create_cell_bundle, CELL_WIDTH};
-
-use super::PLAYER_COLOR;
-use bevy::prelude::{Commands, Component, Entity, Input, KeyCode};
+use bevy::prelude::{Color, Commands, Component, Entity};
 use std::collections::VecDeque;
 
-#[derive(Component)]
-pub struct Player;
-
-#[derive(Component, Default, PartialEq, Clone, Copy)]
+#[derive(Debug, Component, Default, PartialEq, Clone, Copy)]
 pub enum Direction {
   Bottom,
   Left,
@@ -27,52 +22,26 @@ impl Direction {
     }
   }
 
-  pub(super) fn next_from_input(&self, keyboard_input: &Input<KeyCode>) -> Option<Self> {
-    if self != &Direction::Bottom && keyboard_input.pressed(KeyCode::W) {
-      Some(Direction::Top)
-    } else if self != &Direction::Right && keyboard_input.pressed(KeyCode::A) {
-      Some(Direction::Left)
-    } else if self != &Direction::Top && keyboard_input.pressed(KeyCode::S) {
-      Some(Direction::Bottom)
-    } else if self != &Direction::Left && keyboard_input.pressed(KeyCode::D) {
-      Some(Direction::Right)
-    } else {
-      None
+  pub(super) fn xy(&self, x: f32, y: f32) -> (f32, f32) {
+    match self {
+      Direction::Bottom => (0., -y),
+      Direction::Right => (x, 0.),
+      Direction::Top => (0., y),
+      Direction::Left => (-x, 0.),
     }
   }
 }
 
-#[derive(Component, Default)]
-pub struct DirectionQueue {
-  pub(super) previous: Direction,
-  pub(super) current: Direction,
-  pub(super) next: Option<Direction>,
-}
-
-impl DirectionQueue {
-  pub(super) fn advance(&mut self) {
-    if self.current == self.previous {
-      if let Some(next_direction) = self.next.take() {
-        self.current = next_direction;
-      }
-    }
-    self.previous = self.current;
-  }
-}
-
-#[derive(Debug, Component, Clone, Copy)]
-pub struct SnakeHead {
-  pub(super) x: f32,
-  pub(super) y: f32,
-}
+#[derive(Debug, Component)]
+pub struct SnakeHead;
 
 #[derive(Debug, Component)]
 pub struct SnakeSegment;
 
 impl SnakeSegment {
-  pub(super) fn spawn(commands: &mut Commands, x: f32, y: f32) -> Entity {
+  pub(super) fn spawn(commands: &mut Commands, color: Color, x: f32, y: f32) -> Entity {
     commands
-      .spawn((SnakeSegment, create_cell_bundle(PLAYER_COLOR, x, y)))
+      .spawn((SnakeSegment, create_cell_bundle(color, x, y)))
       .id()
   }
 }
@@ -81,19 +50,14 @@ impl SnakeSegment {
 pub struct SnakeBody(VecDeque<Entity>);
 
 impl SnakeBody {
-  pub(super) fn new(commands: &mut Commands, head: SnakeHead, tail_length: usize) -> Self {
+  pub fn new(commands: &mut Commands, color: Color, x: f32, y: f32, tail_length: usize) -> Self {
     let entity = commands
-      .spawn((
-        head,
-        SnakeSegment,
-        create_cell_bundle(PLAYER_COLOR, head.x, head.y),
-      ))
+      .spawn((SnakeHead, SnakeSegment, create_cell_bundle(color, x, y)))
       .id();
     let mut body = VecDeque::from([entity]);
 
     body.extend(
-      (1..=tail_length)
-        .map(|i| SnakeSegment::spawn(commands, head.x - CELL_WIDTH * i as f32, head.y)),
+      (1..=tail_length).map(|i| SnakeSegment::spawn(commands, color, x - CELL_WIDTH * i as f32, y)),
     );
 
     Self(body)

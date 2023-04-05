@@ -1,15 +1,15 @@
 use super::{components::Food, events::FoodEaten, FOOD_COLOR};
-use crate::{snake::events::BodySizeChange, world::styles::create_cell_bundle};
+use crate::{
+  snake::events::{BodySizeChange, SnakeSizeChange},
+  world::styles::create_cell_bundle,
+};
 use bevy::{
   prelude::{Commands, EventReader, EventWriter, Query, Transform, With},
   window::{PrimaryWindow, Window},
 };
 use rand::random;
 
-pub(super) fn food_spawning(
-  mut commands: Commands,
-  window: Query<&Window, With<PrimaryWindow>>,
-) {
+pub(super) fn spawn(mut commands: Commands, window: Query<&Window, With<PrimaryWindow>>) {
   let window = window.get_single().unwrap();
 
   commands.spawn((
@@ -22,8 +22,8 @@ pub(super) fn food_spawning(
   ));
 }
 
-pub(super) fn food_repositioning(
-  mut body_size_change_writer: EventWriter<BodySizeChange>,
+pub(super) fn reposition(
+  mut body_size_change_writer: EventWriter<SnakeSizeChange>,
   mut food_eaten_reader: EventReader<FoodEaten>,
   mut food_query: Query<&mut Transform, With<Food>>,
   window: Query<&Window, With<PrimaryWindow>>,
@@ -33,9 +33,9 @@ pub(super) fn food_repositioning(
     return;
   };
 
-  for _ in food_eaten_reader.iter() {
+  for FoodEaten(snake) in food_eaten_reader.iter() {
     food.translation.x = random::<f32>() * window.width();
     food.translation.y = random::<f32>() * window.height();
-    body_size_change_writer.send(BodySizeChange::Grow(1));
+    body_size_change_writer.send((*snake, BodySizeChange::Grow(1)));
   }
 }

@@ -1,25 +1,32 @@
 use crate::{
   food::components::Food,
-  snake::{components::SnakeBody, events::BodySizeChange},
+  player::components::Player,
+  snake::{
+    components::SnakeBody,
+    events::{BodySizeChange, SnakeSizeChange},
+  },
 };
 use bevy::prelude::{Entity, EventWriter, Input, KeyCode, Query, Res, With};
 
 pub(super) fn god_mode(
-  mut size_change_event_writer: EventWriter<BodySizeChange>,
+  mut size_change_event_writer: EventWriter<SnakeSizeChange>,
+  player_query: Query<Entity, With<Player>>,
   keyboard_input: Res<Input<KeyCode>>,
 ) {
   use BodySizeChange::*;
   if keyboard_input.just_pressed(KeyCode::E) {
-    size_change_event_writer.send(Grow(1));
+    let Ok(player) = player_query.get_single() else { return; };
+    size_change_event_writer.send((player, Grow(1)));
   } else if keyboard_input.just_pressed(KeyCode::Q) {
-    size_change_event_writer.send(Shrink(1));
+    let Ok(player) = player_query.get_single() else { return; };
+    size_change_event_writer.send((player, Shrink(1)));
   }
 }
 
 pub(super) fn print_debug_info(
   keyboard_input: Res<Input<KeyCode>>,
   entity_query: Query<Entity>,
-  player_query: Query<&SnakeBody>,
+  player_query: Query<&SnakeBody, With<Player>>,
   food_query: Query<Entity, With<Food>>,
 ) {
   if keyboard_input.just_pressed(KeyCode::P) {

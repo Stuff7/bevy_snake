@@ -10,8 +10,8 @@ impl Plugin for FoodPlugin {
   fn build(&self, app: &mut App) {
     app
       .add_event::<events::FoodEaten>()
-      .add_startup_system(systems::food_spawning)
-      .add_system(systems::food_repositioning);
+      .add_startup_system(systems::spawn)
+      .add_system(systems::reposition);
   }
 }
 
@@ -23,5 +23,7 @@ pub mod components {
 }
 
 pub mod events {
-  pub struct FoodEaten;
+  use bevy::prelude::Entity;
+
+  pub struct FoodEaten(pub Entity);
 }
