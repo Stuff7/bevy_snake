@@ -11,6 +11,8 @@ impl Plugin for PlayerPlugin {
   fn build(&self, app: &mut App) {
     app
       .add_startup_system(systems::spawn)
+      .add_event::<events::RespawnPlayer>()
+      .add_system(systems::respawn)
       .add_system(systems::queue_input)
       .add_system(systems::iter_input);
   }
@@ -28,4 +30,8 @@ pub mod components {
     pub(super) previous: Direction,
     pub(super) next: Option<Direction>,
   }
+}
+
+pub mod events {
+  pub struct RespawnPlayer;
 }

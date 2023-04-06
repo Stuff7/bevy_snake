@@ -1,6 +1,6 @@
 use super::{
-  components::{Direction, SnakeBody, SnakeHead, SnakeSegment},
-  events::{BodySizeChange, Serpentine, SnakeSizeChange},
+  components::{snake_crashed, Direction, Living, Snake, SnakeBody, SnakeSegment},
+  events::{BodySizeChange, Serpentine, SnakeDeath, SnakeSizeChange},
 };
 use crate::{
   collections::TupleOps,
@@ -12,50 +12,54 @@ use bevy::prelude::{
 };
 
 pub(super) fn serpentine(
-  mut commands: Commands,
   mut serpentine_writer: EventWriter<Serpentine>,
-  mut snake_query: Query<(Entity, &Direction, &mut SnakeBody)>,
-  mut snake_segment_query: Query<&mut Transform, With<SnakeSegment>>,
+  mut snake_query: Query<
+    (Entity, &mut Transform, &Direction, &mut SnakeBody),
+    (With<Snake>, With<Living>),
+  >,
+  mut snake_segment_query: Query<&mut Transform, (With<SnakeSegment>, Without<Snake>)>,
 ) {
-  for (snake, direction, mut body) in snake_query.iter_mut() {
-    let head_entity = body.head();
-    let Ok(old_head) = snake_segment_query.get_mut(head_entity) else { continue; };
+  for (snake, mut snake_head, direction, mut body) in snake_query.iter_mut() {
+    if let Some(head_entity) = body.head() {
+      let tail = if let Some(tail_entity) = body.pop_tail() {
+        body.push_head(tail_entity);
+        tail_entity
+      } else {
+        head_entity
+      };
+      let Ok(mut old_head) = snake_segment_query.get_mut(tail) else { continue; };
+      old_head.translation = snake_head.translation;
+    }
 
-    let (x, y) =
-      (old_head.translation.x, old_head.translation.y).add(direction.xy(CELL_WIDTH, CELL_HEIGHT));
+    let (x, y) = direction.xy(CELL_WIDTH, CELL_HEIGHT);
+    snake_head.translation.x += x;
+    snake_head.translation.y += y;
 
-    let mut new_head = if let Some(tail_entity) = body.pop_tail() {
-      commands.entity(head_entity).remove::<SnakeHead>();
-      commands.entity(tail_entity).insert(SnakeHead);
-      body.push_head(tail_entity);
-      let Ok(head) = snake_segment_query.get_mut(tail_entity) else { continue; };
-      head
-    } else {
-      old_head
-    };
-
-    new_head.translation.x = x;
-    new_head.translation.y = y;
-    serpentine_writer.send(Serpentine(snake, new_head.translation));
+    serpentine_writer.send(Serpentine(snake, snake_head.translation));
   }
 }
 
 pub(super) fn resize(
   mut commands: Commands,
   mut size_change_reader: EventReader<SnakeSizeChange>,
-  mut snake_query: Query<(&mut SnakeBody, &Direction)>,
-  snake_segment_query: Query<(&Transform, &Sprite), With<SnakeSegment>>,
+  mut snake_query: Query<(&mut SnakeBody, &Transform, &Direction, &Sprite), With<Snake>>,
+  snake_segment_query: Query<&Transform, With<SnakeSegment>>,
 ) {
   use BodySizeChange::*;
   for (snake, size_change) in size_change_reader.iter() {
-    let Ok((mut body, direction)) = snake_query.get_mut(*snake) else {
+    let Ok((mut body, head, direction, sprite)) = snake_query.get_mut(*snake) else {
       return;
     };
     match size_change {
       Grow(size) => {
         if *size > 0 {
-          let Ok((tail, sprite)) = snake_segment_query.get(body.tail()) else { return; };
-          let tail = tail.translation;
+          let tail = if let Some(tail) = body.tail() {
+            let Ok(tail) = snake_segment_query.get(tail) else { return; };
+            tail
+          } else {
+            head
+          }
+          .translation;
           let direction = direction.opposite();
           let tail_segments = (1..=*size).map(|i| {
             let (x, y) =
@@ -91,17 +95,36 @@ pub(super) fn eat(
 }
 
 pub(super) fn die(
+  mut commands: Commands,
   mut serpentine_reader: EventReader<Serpentine>,
-  snake_segment_query: Query<&Transform, (With<SnakeSegment>, Without<SnakeHead>)>,
+  snake_head_query: Query<(Entity, &Transform), (With<Snake>, Without<SnakeSegment>)>,
+  snake_segment_query: Query<&Transform, (With<SnakeSegment>, Without<Snake>)>,
 ) {
-  for event in serpentine_reader.iter() {
-    let head = event.1;
-    if snake_segment_query
-      .iter()
-      .any(|segment| segment.translation == head)
-    {
-      println!("GAME OVER!");
+  for Serpentine(snake_entity, snake_head) in serpentine_reader.iter().copied() {
+    if snake_crashed(
+      snake_head_query.iter().map(|h| (h.0, h.1.translation)),
+      snake_segment_query.iter().map(|h| h.translation),
+      snake_entity,
+      snake_head,
+    ) {
+      println!("Snake {snake_entity:?} DIED");
+      commands.entity(snake_entity).remove::<Living>();
       return;
     }
+  }
+}
+
+pub(super) fn despawn(
+  mut commands: Commands,
+  mut snake_death_writer: EventWriter<SnakeDeath>,
+  mut snake_query: Query<(Entity, &mut SnakeBody), (With<Snake>, Without<Living>)>,
+) {
+  for (snake, mut body) in snake_query.iter_mut() {
+    commands
+      .entity(body.pop_tail().unwrap_or_else(|| {
+        snake_death_writer.send(SnakeDeath);
+        snake
+      }))
+      .despawn();
   }
 }

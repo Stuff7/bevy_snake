@@ -6,7 +6,7 @@ use bevy::prelude::{App, ClearColor, Color, Plugin, Vec2};
 pub const BACKGROUND_COLOR: Color = Color::rgb(23. / 255., 23. / 255., 23. / 255.);
 pub const CELL_WIDTH: f32 = 20.;
 pub const CELL_HEIGHT: f32 = 20.;
-pub const CELL_SIZE: Vec2 = Vec2::new(CELL_WIDTH, CELL_HEIGHT);
+pub const CELL_SIZE: Vec2 = Vec2::new(CELL_WIDTH - 4., CELL_HEIGHT - 4.);
 
 pub struct WorldPlugin;
 

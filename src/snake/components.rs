@@ -1,6 +1,41 @@
 use crate::world::{styles::create_cell_bundle, CELL_WIDTH};
-use bevy::prelude::{Color, Commands, Component, Entity};
+use bevy::prelude::{Bundle, Color, Commands, Component, Entity, SpriteBundle, Vec3};
 use std::collections::VecDeque;
+
+#[derive(Bundle)]
+pub struct SnakeBundle {
+  snake: Snake,
+  #[bundle]
+  sprite_bundle: SpriteBundle,
+  direction: Direction,
+  body: SnakeBody,
+  living: Living,
+}
+
+impl SnakeBundle {
+  pub fn new(
+    commands: &mut Commands,
+    x: f32,
+    y: f32,
+    color: Color,
+    direction: Direction,
+    tail_length: usize,
+  ) -> Self {
+    Self {
+      snake: Snake,
+      sprite_bundle: create_cell_bundle(color, x, y),
+      direction,
+      body: SnakeBody::new(commands, color, x, y, tail_length),
+      living: Living,
+    }
+  }
+}
+
+#[derive(Debug, Component)]
+pub struct Snake;
+
+#[derive(Debug, Component)]
+pub struct Living;
 
 #[derive(Debug, Component, Default, PartialEq, Clone, Copy)]
 pub enum Direction {
@@ -12,7 +47,7 @@ pub enum Direction {
 }
 
 impl Direction {
-  pub(super) fn opposite(&self) -> Self {
+  pub fn opposite(&self) -> Self {
     use Direction::*;
     match *self {
       Bottom => Top,
@@ -22,7 +57,7 @@ impl Direction {
     }
   }
 
-  pub(super) fn xy(&self, x: f32, y: f32) -> (f32, f32) {
+  pub fn xy(&self, x: f32, y: f32) -> (f32, f32) {
     match self {
       Direction::Bottom => (0., -y),
       Direction::Right => (x, 0.),
@@ -31,9 +66,6 @@ impl Direction {
     }
   }
 }
-
-#[derive(Debug, Component)]
-pub struct SnakeHead;
 
 #[derive(Debug, Component)]
 pub struct SnakeSegment;
@@ -51,28 +83,19 @@ pub struct SnakeBody(VecDeque<Entity>);
 
 impl SnakeBody {
   pub fn new(commands: &mut Commands, color: Color, x: f32, y: f32, tail_length: usize) -> Self {
-    let entity = commands
-      .spawn((SnakeHead, SnakeSegment, create_cell_bundle(color, x, y)))
-      .id();
-    let mut body = VecDeque::from([entity]);
-
-    body.extend(
-      (1..=tail_length).map(|i| SnakeSegment::spawn(commands, color, x - CELL_WIDTH * i as f32, y)),
-    );
-
-    Self(body)
+    Self(
+      (1..=tail_length)
+        .map(|i| SnakeSegment::spawn(commands, color, x - CELL_WIDTH * i as f32, y))
+        .collect(),
+    )
   }
 
-  pub(super) fn head(&self) -> Entity {
-    self
-      .0
-      .front()
-      .copied()
-      .expect("SnakeBody should always have a head")
+  pub fn head(&self) -> Option<Entity> {
+    self.0.front().copied()
   }
 
-  pub(super) fn tail(&self) -> Entity {
-    self.0.back().copied().unwrap_or_else(|| self.head())
+  pub(super) fn tail(&self) -> Option<Entity> {
+    self.0.back().copied()
   }
 
   pub(super) fn push_head(&mut self, entity: Entity) {
@@ -84,6 +107,20 @@ impl SnakeBody {
   }
 
   pub(super) fn pop_tail(&mut self) -> Option<Entity> {
-    (self.0.len() > 1).then(|| self.0.pop_back()).flatten()
+    self.0.pop_back()
   }
+}
+
+pub fn snake_crashed<H: Iterator<Item = (Entity, Vec3)>, B: Iterator<Item = Vec3>>(
+  mut head_iter: H,
+  mut body_iter: B,
+  snake_entity: Entity,
+  snake_head: Vec3,
+) -> bool {
+  head_iter.any(|(entity, head)| {
+    if entity == snake_entity {
+      return false;
+    }
+    head.distance(snake_head) < CELL_WIDTH
+  }) || body_iter.any(|segment| segment.distance(snake_head) < CELL_WIDTH)
 }

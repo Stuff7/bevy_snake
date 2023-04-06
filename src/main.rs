@@ -1,4 +1,5 @@
 mod debug;
+mod enemy;
 mod food;
 mod player;
 mod snake;
@@ -11,6 +12,7 @@ fn main() {
     .add_plugins(DefaultPlugins)
     .add_plugin(world::WorldPlugin)
     .add_plugin(player::PlayerPlugin)
+    .add_plugin(enemy::EnemyPlugin)
     .add_plugin(snake::SnakePlugin)
     .add_plugin(food::FoodPlugin)
     .add_plugin(debug::DebugPlugin)

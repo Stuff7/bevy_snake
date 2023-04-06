@@ -1,9 +1,10 @@
 use super::{
   components::{DirectionQueue, Player},
+  events::RespawnPlayer,
   INITIAL_PLAYER_LENGTH, PLAYER_COLOR,
 };
 use crate::snake::{
-  components::{Direction, SnakeBody},
+  components::{Direction, SnakeBundle},
   events::Serpentine,
 };
 use bevy::{
@@ -12,21 +13,21 @@ use bevy::{
 };
 
 pub(super) fn spawn(mut commands: Commands, window: Query<&Window, With<PrimaryWindow>>) {
-  let window = window.get_single().unwrap();
-  let player = (
-    Player,
-    Direction::default(),
-    DirectionQueue::default(),
-    SnakeBody::new(
-      &mut commands,
-      PLAYER_COLOR,
-      window.width() / 2.,
-      window.height() / 2.,
-      INITIAL_PLAYER_LENGTH,
-    ),
-  );
+  spawn_player(&mut commands, window.get_single().unwrap());
+}
 
-  commands.spawn(player);
+pub(super) fn respawn(
+  mut commands: Commands,
+  mut respawn_reader: EventReader<RespawnPlayer>,
+  window: Query<&Window, With<PrimaryWindow>>,
+  player_query: Query<(), With<Player>>,
+) {
+  for _ in respawn_reader.iter() {
+    if player_query.get_single().is_ok() {
+      return;
+    }
+    spawn_player(&mut commands, window.get_single().unwrap());
+  }
 }
 
 pub(super) fn queue_input(
@@ -68,4 +69,21 @@ pub(super) fn iter_input(
     }
     direction_queue.previous = *direction;
   }
+}
+
+fn spawn_player(commands: &mut Commands, window: &Window) {
+  let player = (
+    Player,
+    DirectionQueue::default(),
+    SnakeBundle::new(
+      commands,
+      window.width() / 2.,
+      window.height() / 2.,
+      PLAYER_COLOR,
+      Direction::default(),
+      INITIAL_PLAYER_LENGTH,
+    ),
+  );
+
+  commands.spawn(player);
 }
