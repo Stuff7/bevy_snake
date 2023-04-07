@@ -1,15 +1,15 @@
-use crate::world::{styles::create_cell_bundle, CELL_WIDTH};
+use crate::board::{utils::create_cell_bundle, CELL_SIZE};
 use bevy::prelude::{Bundle, Color, Commands, Component, Entity, SpriteBundle, Vec3};
 use std::collections::VecDeque;
 
 #[derive(Bundle)]
 pub struct SnakeBundle {
   snake: Snake,
-  #[bundle]
-  sprite_bundle: SpriteBundle,
   direction: Direction,
   body: SnakeBody,
   living: Living,
+  #[bundle]
+  sprite_bundle: SpriteBundle,
 }
 
 impl SnakeBundle {
@@ -85,7 +85,7 @@ impl SnakeBody {
   pub fn new(commands: &mut Commands, color: Color, x: f32, y: f32, tail_length: usize) -> Self {
     Self(
       (1..=tail_length)
-        .map(|i| SnakeSegment::spawn(commands, color, x - CELL_WIDTH * i as f32, y))
+        .map(|i| SnakeSegment::spawn(commands, color, x - CELL_SIZE * i as f32, y))
         .collect(),
     )
   }
@@ -121,6 +121,6 @@ pub fn snake_crashed<H: Iterator<Item = (Entity, Vec3)>, B: Iterator<Item = Vec3
     if entity == snake_entity {
       return false;
     }
-    head.distance(snake_head) < CELL_WIDTH
-  }) || body_iter.any(|segment| segment.distance(snake_head) < CELL_WIDTH)
+    head.distance(snake_head) < CELL_SIZE
+  }) || body_iter.any(|segment| segment.distance(snake_head) < CELL_SIZE)
 }

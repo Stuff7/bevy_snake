@@ -1,16 +1,28 @@
+mod board;
+pub mod color;
 mod debug;
 mod enemy;
 mod food;
 mod player;
 mod snake;
-mod world;
 
-use bevy::{prelude::App, DefaultPlugins};
+use bevy::{
+  prelude::{App, DefaultPlugins, PluginGroup, Window, WindowPlugin},
+  window::PresentMode,
+};
 
 fn main() {
   App::new()
-    .add_plugins(DefaultPlugins)
-    .add_plugin(world::WorldPlugin)
+    .add_plugins(DefaultPlugins.set(WindowPlugin {
+      primary_window: Some(Window {
+        title: "Snake".into(),
+        resolution: (board::BOARD_SIZE, board::BOARD_SIZE).into(),
+        present_mode: PresentMode::AutoVsync,
+        ..Default::default()
+      }),
+      ..Default::default()
+    }))
+    .add_plugin(board::BoardPlugin)
     .add_plugin(player::PlayerPlugin)
     .add_plugin(enemy::EnemyPlugin)
     .add_plugin(snake::SnakePlugin)

@@ -1,15 +1,16 @@
 use super::{components::Enemy, INITIAL_ENEMY_LENGTH};
 use crate::{
+  board::CELL_SIZE,
   collections::TupleOps,
+  color::generate_bright_color,
   food::components::Food,
   snake::{
     components::{snake_crashed, Direction, Snake, SnakeBundle, SnakeSegment},
     events::{Serpentine, SnakeDeath},
   },
-  world::{CELL_HEIGHT, CELL_WIDTH},
 };
 use bevy::{
-  prelude::{Color, Commands, Entity, EventReader, Query, Transform, Vec3, With, Without},
+  prelude::{Commands, Entity, EventReader, Query, Transform, Vec3, With, Without},
   window::{PrimaryWindow, Window},
 };
 use rand::random;
@@ -30,31 +31,29 @@ pub(super) fn respawn(
 
 pub(super) fn seek_food(
   mut serpentine_reader: EventReader<Serpentine>,
-  mut enemy_query: Query<(Entity, &mut Direction, &Transform), With<Enemy>>,
-  food_query: Query<&Transform, With<Food>>,
-  snake_head_query: Query<(Entity, &Transform), (With<Snake>, Without<SnakeSegment>)>,
-  snake_segment_query: Query<&Transform, With<SnakeSegment>>,
+  mut q_enemy: Query<&mut Direction, With<Enemy>>,
+  q_food: Query<&Transform, With<Food>>,
+  q_snake_head: Query<(Entity, &Transform), (With<Snake>, Without<SnakeSegment>)>,
+  q_snake_segment: Query<&Transform, With<SnakeSegment>>,
 ) {
-  let Ok(food) = food_query.get_single() else { return; };
+  let Ok(food) = q_food.get_single() else { return; };
   let food = food.translation;
-  for _ in serpentine_reader.iter() {
-    for (enemy_entity, mut direction, head) in enemy_query.iter_mut() {
-      let head = head.translation;
-      for nearest in sort_direction_by_nearest(head, food) {
-        if nearest == direction.opposite() {
-          continue;
-        }
-        let (x, y) = (head.x, head.y).add(nearest.xy(CELL_WIDTH + 4., CELL_HEIGHT + 4.));
-        let head = Vec3::new(x, y, 0.);
-        if !snake_crashed(
-          snake_head_query.iter().map(|h| (h.0, h.1.translation)),
-          snake_segment_query.iter().map(|h| h.translation),
-          enemy_entity,
-          head,
-        ) {
-          *direction = nearest;
-          break;
-        }
+  for Serpentine(enemy_entity, head) in serpentine_reader.iter().copied() {
+    let Ok(mut direction) = q_enemy.get_mut(enemy_entity) else { continue; };
+    for nearest in sort_direction_by_nearest(head, food) {
+      if nearest == direction.opposite() {
+        continue;
+      }
+      let (x, y) = (head.x, head.y).add(nearest.xy(CELL_SIZE + 4., CELL_SIZE + 4.));
+      let head = Vec3::new(x, y, 0.);
+      if !snake_crashed(
+        q_snake_head.iter().map(|h| (h.0, h.1.translation)),
+        q_snake_segment.iter().map(|h| h.translation),
+        enemy_entity,
+        head,
+      ) {
+        *direction = nearest;
+        break;
       }
     }
   }
@@ -63,11 +62,11 @@ pub(super) fn seek_food(
 pub fn sort_direction_by_nearest(position: Vec3, target: Vec3) -> [Direction; 4] {
   use Direction::*;
   let direction_h = if position.x > target.x { Left } else { Right };
-  let (x, y) = (position.x, position.y).add(direction_h.xy(CELL_WIDTH, CELL_HEIGHT));
+  let (x, y) = (position.x, position.y).add(direction_h.xy(CELL_SIZE, CELL_SIZE));
   let distance_h = target.distance(Vec3::new(x, y, 0.));
 
   let direction_v = if position.y > target.y { Bottom } else { Top };
-  let (x, y) = (position.x, position.y).add(direction_v.xy(CELL_WIDTH, CELL_HEIGHT));
+  let (x, y) = (position.x, position.y).add(direction_v.xy(CELL_SIZE, CELL_SIZE));
   let distance_v = target.distance(Vec3::new(x, y, 0.));
 
   if distance_h < distance_v {
@@ -94,11 +93,7 @@ fn spawn_enemy(commands: &mut Commands, window: &Window) {
       commands,
       random::<f32>() * window.width(),
       random::<f32>() * window.height(),
-      Color::rgb(
-        random::<f32>() / 2. + 0.5,
-        random::<f32>() / 2. + 0.5,
-        random::<f32>() / 2. + 0.5,
-      ),
+      generate_bright_color(),
       Direction::default(),
       INITIAL_ENEMY_LENGTH,
     ),

@@ -19,11 +19,11 @@ pub(super) fn spawn(mut commands: Commands, window: Query<&Window, With<PrimaryW
 pub(super) fn respawn(
   mut commands: Commands,
   mut respawn_reader: EventReader<RespawnPlayer>,
+  q_player: Query<(), With<Player>>,
   window: Query<&Window, With<PrimaryWindow>>,
-  player_query: Query<(), With<Player>>,
 ) {
   for _ in respawn_reader.iter() {
-    if player_query.get_single().is_ok() {
+    if q_player.get_single().is_ok() {
       return;
     }
     spawn_player(&mut commands, window.get_single().unwrap());
@@ -32,9 +32,9 @@ pub(super) fn respawn(
 
 pub(super) fn queue_input(
   keyboard_input: Res<Input<KeyCode>>,
-  mut player_query: Query<(&mut Direction, &mut DirectionQueue), With<Player>>,
+  mut q_player: Query<(&mut Direction, &mut DirectionQueue), With<Player>>,
 ) {
-  let Ok((mut direction, mut direction_queue)) = player_query.get_single_mut() else { return; };
+  let Ok((mut direction, mut direction_queue)) = q_player.get_single_mut() else { return; };
 
   use Direction::*;
   let new_direction = if *direction != Bottom && keyboard_input.pressed(KeyCode::W) {
@@ -58,9 +58,9 @@ pub(super) fn queue_input(
 
 pub(super) fn iter_input(
   mut serpentine_reader: EventReader<Serpentine>,
-  mut player_query: Query<(&mut Direction, &mut DirectionQueue), With<Player>>,
+  mut q_player: Query<(&mut Direction, &mut DirectionQueue), With<Player>>,
 ) {
-  let Ok((mut direction, mut direction_queue)) = player_query.get_single_mut() else { return; };
+  let Ok((mut direction, mut direction_queue)) = q_player.get_single_mut() else { return; };
   for _ in serpentine_reader.iter() {
     if *direction == direction_queue.previous {
       if let Some(next_direction) = direction_queue.next.take() {
