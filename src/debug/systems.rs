@@ -23,6 +23,9 @@ pub(super) fn god_mode(
     let Ok(player) = q_player.get_single() else { return; };
     size_change_writer.send((player, Shrink(1)));
   } else if keyboard_input.just_pressed(KeyCode::R) {
+    if q_player.get_single().is_ok() {
+      return;
+    }
     respawn_player_writer.send(RespawnPlayer);
   }
 }

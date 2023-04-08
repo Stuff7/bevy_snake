@@ -52,10 +52,12 @@ pub(super) fn seek_food(
   q_snake_head: Query<(Entity, &Transform), (With<Snake>, Without<SnakeSegment>)>,
   q_snake_segment: Query<&Transform, With<SnakeSegment>>,
 ) {
-  let Ok(food) = q_food.get_single() else { return; };
-  let food = food.translation;
   for Serpentine(enemy_entity, head) in serpentine_reader.iter().copied() {
     let Ok(mut direction) = q_enemy.get_mut(enemy_entity) else { continue; };
+    let Some((_, food)) = q_food
+      .iter()
+      .map(|food| (food.translation.distance(head), food.translation))
+      .min_by(|(a, _), (b, _)| a.partial_cmp(b).unwrap()) else {continue};
     for nearest in sort_direction_by_nearest(head, food) {
       if nearest == direction.opposite() {
         continue;

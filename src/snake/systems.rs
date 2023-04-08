@@ -114,14 +114,13 @@ pub(super) fn resize(
 pub(super) fn eat(
   mut serpentine_reader: EventReader<Serpentine>,
   mut food_eaten_writer: EventWriter<FoodEaten>,
-  q_food: Query<&Transform, With<Food>>,
+  q_food: Query<(Entity, &Transform), With<Food>>,
 ) {
   for Serpentine(snake, head) in serpentine_reader.iter().copied() {
-    let Ok(food_transform) = q_food.get_single() else { return; };
-    let distance = food_transform.translation.distance(head);
-
-    if distance < CELL_SIZE {
-      food_eaten_writer.send(FoodEaten(snake));
+    for (food, food_transform) in &q_food {
+      if food_transform.translation.distance(head) < CELL_SIZE {
+        food_eaten_writer.send(FoodEaten { snake, food });
+      }
     }
   }
 }

@@ -9,9 +9,7 @@ pub struct FoodPlugin;
 impl Plugin for FoodPlugin {
   fn build(&self, app: &mut App) {
     app
-      .add_event::<events::SpawnFood>()
       .add_event::<events::FoodEaten>()
-      .add_startup_system(systems::startup)
       .add_system(systems::spawn)
       .add_system(systems::reposition);
   }
@@ -27,7 +25,8 @@ pub mod components {
 pub mod events {
   use bevy::prelude::Entity;
 
-  pub struct FoodEaten(pub Entity);
-
-  pub struct SpawnFood(pub f32, pub f32);
+  pub struct FoodEaten {
+    pub snake: Entity,
+    pub food: Entity,
+  }
 }
