@@ -1,8 +1,5 @@
 use super::{CELL_SIZE, CELL_SIZE_VEC, HALF_CELL_SIZE};
-use bevy::{
-  prelude::{Color, Transform, Vec3},
-  sprite::{Sprite, SpriteBundle},
-};
+use bevy::prelude::{Color, Sprite, SpriteBundle, Transform, Vec3};
 
 pub fn create_cell_bundle(color: Color, x: f32, y: f32) -> SpriteBundle {
   SpriteBundle {
@@ -18,8 +15,8 @@ pub fn create_cell_bundle(color: Color, x: f32, y: f32) -> SpriteBundle {
 
 pub fn get_board_position(x: f32, y: f32) -> Vec3 {
   Vec3::new(
-    ((x / CELL_SIZE) as u32 * CELL_SIZE as u32) as f32 + HALF_CELL_SIZE,
-    ((y / CELL_SIZE) as u32 * CELL_SIZE as u32) as f32 + HALF_CELL_SIZE,
+    (x / CELL_SIZE).floor() * CELL_SIZE + HALF_CELL_SIZE,
+    (y / CELL_SIZE).floor() * CELL_SIZE + HALF_CELL_SIZE,
     0.,
   )
 }

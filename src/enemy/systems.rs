@@ -1,6 +1,6 @@
 use super::{components::Enemy, INITIAL_ENEMY_LENGTH};
 use crate::{
-  board::CELL_SIZE,
+  board::{components::Board, BOARD_SIZE, CELL_SIZE},
   collections::TupleOps,
   color::generate_bright_color,
   food::components::Food,
@@ -9,23 +9,36 @@ use crate::{
     events::{Serpentine, SnakeDeath},
   },
 };
-use bevy::{
-  prelude::{Commands, Entity, EventReader, Query, Transform, Vec3, With, Without},
-  window::{PrimaryWindow, Window},
+use bevy::prelude::{
+  BuildChildren, Commands, Entity, EventReader, EventWriter, Query, Transform, Vec3, With, Without,
 };
 use rand::random;
 
-pub(super) fn spawn(mut commands: Commands, window: Query<&Window, With<PrimaryWindow>>) {
-  spawn_enemy(&mut commands, window.get_single().unwrap());
+pub(super) fn startup(mut snake_death_writer: EventWriter<SnakeDeath>) {
+  snake_death_writer.send(SnakeDeath);
 }
 
 pub(super) fn respawn(
   mut commands: Commands,
   mut snake_death_reader: EventReader<SnakeDeath>,
-  window: Query<&Window, With<PrimaryWindow>>,
+  q_board: Query<Entity, With<Board>>,
 ) {
   for _ in snake_death_reader.iter() {
-    spawn_enemy(&mut commands, window.get_single().unwrap());
+    let Ok(board) = q_board.get_single() else {return};
+    let enemy = (
+      Enemy,
+      SnakeBundle::new(
+        &mut commands,
+        board,
+        random::<f32>() * BOARD_SIZE - BOARD_SIZE / 2.,
+        random::<f32>() * BOARD_SIZE - BOARD_SIZE / 2.,
+        generate_bright_color(),
+        Direction::default(),
+        INITIAL_ENEMY_LENGTH,
+      ),
+    );
+    let enemy = commands.spawn(enemy).id();
+    commands.entity(board).add_child(enemy);
   }
 }
 
@@ -84,20 +97,4 @@ pub fn sort_direction_by_nearest(position: Vec3, target: Vec3) -> [Direction; 4]
       direction_v.opposite(),
     ]
   }
-}
-
-fn spawn_enemy(commands: &mut Commands, window: &Window) {
-  let enemy = (
-    Enemy,
-    SnakeBundle::new(
-      commands,
-      random::<f32>() * window.width(),
-      random::<f32>() * window.height(),
-      generate_bright_color(),
-      Direction::default(),
-      INITIAL_ENEMY_LENGTH,
-    ),
-  );
-
-  commands.spawn(enemy);
 }

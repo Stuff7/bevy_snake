@@ -3,6 +3,7 @@ pub mod color;
 mod debug;
 mod enemy;
 mod food;
+mod main_camera;
 mod player;
 mod snake;
 
@@ -22,6 +23,7 @@ fn main() {
       }),
       ..Default::default()
     }))
+    .add_plugin(main_camera::MainCameraPlugin)
     .add_plugin(board::BoardPlugin)
     .add_plugin(player::PlayerPlugin)
     .add_plugin(enemy::EnemyPlugin)

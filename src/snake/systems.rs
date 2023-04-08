@@ -3,13 +3,13 @@ use super::{
   events::{BodySizeChange, Serpentine, SnakeDeath, SnakeSizeChange},
 };
 use crate::{
-  board::{CELL_SIZE, HALF_CELL_SIZE},
+  board::{components::Board, BOARD_SIZE, CELL_SIZE, HALF_CELL_SIZE},
   collections::TupleOps,
   food::{components::Food, events::FoodEaten},
 };
-use bevy::{
-  prelude::{Commands, Entity, EventReader, EventWriter, Query, Sprite, Transform, With, Without},
-  window::{PrimaryWindow, Window},
+use bevy::prelude::{
+  BuildChildren, Commands, Entity, EventReader, EventWriter, Query, Sprite, Transform, With,
+  Without,
 };
 
 pub(super) fn serpentine(
@@ -36,30 +36,21 @@ pub(super) fn serpentine(
     snake_head.translation.x += x;
     snake_head.translation.y += y;
 
-    serpentine_writer.send(Serpentine(snake, snake_head.translation));
-  }
-}
+    let width = BOARD_SIZE;
+    let height = BOARD_SIZE;
 
-pub(super) fn teleport(
-  mut serpentine_reader: EventReader<Serpentine>,
-  mut q_snake: Query<&mut Transform, With<Snake>>,
-  window: Query<&Window, With<PrimaryWindow>>,
-) {
-  let window = window.get_single().unwrap();
-  let width = window.width();
-  let height = window.height();
-  for Serpentine(snake, head) in serpentine_reader.iter().copied() {
-    let Ok(mut snake) = q_snake.get_mut(snake) else { continue; };
-    if head.x >= width {
-      snake.translation.x = HALF_CELL_SIZE;
-    } else if head.x < 0. {
-      snake.translation.x = width - HALF_CELL_SIZE;
+    if snake_head.translation.x >= width / 2. {
+      snake_head.translation.x = HALF_CELL_SIZE - width / 2.;
+    } else if snake_head.translation.x < -width / 2. {
+      snake_head.translation.x = width / 2. - HALF_CELL_SIZE;
     }
-    if head.y >= height {
-      snake.translation.y = HALF_CELL_SIZE;
-    } else if head.y < 0. {
-      snake.translation.y = height + HALF_CELL_SIZE;
+    if snake_head.translation.y >= height / 2. {
+      snake_head.translation.y = HALF_CELL_SIZE - height / 2.;
+    } else if snake_head.translation.y < -height / 2. {
+      snake_head.translation.y = height / 2. - HALF_CELL_SIZE;
     }
+
+    serpentine_writer.send(Serpentine(snake, snake_head.translation));
   }
 }
 
@@ -71,9 +62,11 @@ pub(super) fn resize(
     (With<Snake>, With<Living>),
   >,
   q_snake_segment: Query<&Transform, With<SnakeSegment>>,
+  q_board: Query<Entity, With<Board>>,
 ) {
   use BodySizeChange::*;
   for (snake, size_change) in size_change_reader.iter() {
+    let Ok(board) = q_board.get_single() else {return};
     let Ok((mut body, head, direction, sprite)) = q_snake.get_mut(*snake) else {
       return;
     };
@@ -91,7 +84,7 @@ pub(super) fn resize(
           let tail_segments = (1..=*size).map(|i| {
             let (x, y) =
               (tail.x, tail.y).add(direction.xy(CELL_SIZE * i as f32, CELL_SIZE * i as f32));
-            SnakeSegment::spawn(&mut commands, sprite.color, x, y)
+            SnakeSegment::spawn(&mut commands, board, sprite.color, x, y)
           });
           body.extend_tail(tail_segments);
         }
@@ -124,8 +117,8 @@ pub(super) fn eat(
 pub(super) fn die(
   mut commands: Commands,
   mut serpentine_reader: EventReader<Serpentine>,
-  q_snake_head: Query<(Entity, &Transform), (With<Snake>, Without<SnakeSegment>)>,
-  q_snake_segment: Query<&Transform, (With<SnakeSegment>, Without<Snake>)>,
+  q_snake_head: Query<(Entity, &Transform), (With<Snake>, With<Living>)>,
+  q_snake_segment: Query<&Transform, With<SnakeSegment>>,
 ) {
   for Serpentine(snake_entity, snake_head) in serpentine_reader.iter().copied() {
     if snake_crashed(
@@ -145,13 +138,15 @@ pub(super) fn despawn(
   mut commands: Commands,
   mut snake_death_writer: EventWriter<SnakeDeath>,
   mut q_snake: Query<(Entity, &mut SnakeBody), (With<Snake>, Without<Living>)>,
+  q_board: Query<Entity, With<Board>>,
 ) {
   for (snake, mut body) in q_snake.iter_mut() {
-    commands
-      .entity(body.pop_tail().unwrap_or_else(|| {
-        snake_death_writer.send(SnakeDeath);
-        snake
-      }))
-      .despawn();
+    let Ok(board) = q_board.get_single() else {return};
+    let tail = body.pop_tail().unwrap_or_else(|| {
+      snake_death_writer.send(SnakeDeath);
+      snake
+    });
+    commands.entity(board).remove_children(&[tail]);
+    commands.entity(tail).despawn();
   }
 }

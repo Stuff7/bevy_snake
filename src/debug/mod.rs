@@ -8,6 +8,7 @@ impl Plugin for DebugPlugin {
   fn build(&self, app: &mut App) {
     app
       .add_system(systems::god_mode)
-      .add_system(systems::print_debug_info);
+      .add_system(systems::print_debug_info)
+      .add_system(systems::move_board);
   }
 }

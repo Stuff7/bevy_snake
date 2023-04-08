@@ -17,7 +17,6 @@ impl Plugin for SnakePlugin {
       .add_event::<events::SnakeDeath>()
       .add_system(systems::serpentine.run_if(on_timer(Duration::from_secs_f32(0.1))))
       .add_system(systems::resize)
-      .add_system(systems::teleport)
       .add_system(systems::eat)
       .add_system(systems::despawn.run_if(on_timer(Duration::from_secs_f32(0.1))))
       .add_system(systems::die);

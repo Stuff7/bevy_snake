@@ -1,5 +1,7 @@
 use crate::board::{utils::create_cell_bundle, CELL_SIZE};
-use bevy::prelude::{Bundle, Color, Commands, Component, Entity, SpriteBundle, Vec3};
+use bevy::prelude::{
+  BuildChildren, Bundle, Color, Commands, Component, Entity, SpriteBundle, Vec3,
+};
 use std::collections::VecDeque;
 
 #[derive(Bundle)]
@@ -15,6 +17,7 @@ pub struct SnakeBundle {
 impl SnakeBundle {
   pub fn new(
     commands: &mut Commands,
+    board: Entity,
     x: f32,
     y: f32,
     color: Color,
@@ -25,7 +28,7 @@ impl SnakeBundle {
       snake: Snake,
       sprite_bundle: create_cell_bundle(color, x, y),
       direction,
-      body: SnakeBody::new(commands, color, x, y, tail_length),
+      body: SnakeBody::new(commands, board, color, x, y, tail_length),
       living: Living,
     }
   }
@@ -71,10 +74,18 @@ impl Direction {
 pub struct SnakeSegment;
 
 impl SnakeSegment {
-  pub(super) fn spawn(commands: &mut Commands, color: Color, x: f32, y: f32) -> Entity {
-    commands
+  pub(super) fn spawn(
+    commands: &mut Commands,
+    board: Entity,
+    color: Color,
+    x: f32,
+    y: f32,
+  ) -> Entity {
+    let segment = commands
       .spawn((SnakeSegment, create_cell_bundle(color, x, y)))
-      .id()
+      .id();
+    commands.entity(board).add_child(segment);
+    segment
   }
 }
 
@@ -82,10 +93,17 @@ impl SnakeSegment {
 pub struct SnakeBody(VecDeque<Entity>);
 
 impl SnakeBody {
-  pub fn new(commands: &mut Commands, color: Color, x: f32, y: f32, tail_length: usize) -> Self {
+  pub fn new(
+    commands: &mut Commands,
+    board: Entity,
+    color: Color,
+    x: f32,
+    y: f32,
+    tail_length: usize,
+  ) -> Self {
     Self(
       (1..=tail_length)
-        .map(|i| SnakeSegment::spawn(commands, color, x - CELL_SIZE * i as f32, y))
+        .map(|i| SnakeSegment::spawn(commands, board, color, x - CELL_SIZE * i as f32, y))
         .collect(),
     )
   }

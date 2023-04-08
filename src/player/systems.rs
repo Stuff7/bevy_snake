@@ -3,30 +3,48 @@ use super::{
   events::RespawnPlayer,
   INITIAL_PLAYER_LENGTH, PLAYER_COLOR,
 };
-use crate::snake::{
-  components::{Direction, SnakeBundle},
-  events::Serpentine,
+use crate::{
+  board::components::Board,
+  snake::{
+    components::{Direction, SnakeBundle},
+    events::Serpentine,
+  },
 };
-use bevy::{
-  prelude::{Commands, EventReader, Input, KeyCode, Query, Res, With},
-  window::{PrimaryWindow, Window},
+use bevy::prelude::{
+  BuildChildren, Commands, Entity, EventReader, EventWriter, Input, KeyCode, Query, Res, With,
 };
 
-pub(super) fn spawn(mut commands: Commands, window: Query<&Window, With<PrimaryWindow>>) {
-  spawn_player(&mut commands, window.get_single().unwrap());
+pub(super) fn startup(mut respawn_writer: EventWriter<RespawnPlayer>) {
+  respawn_writer.send(RespawnPlayer);
 }
 
-pub(super) fn respawn(
+pub(super) fn spawn(
   mut commands: Commands,
   mut respawn_reader: EventReader<RespawnPlayer>,
   q_player: Query<(), With<Player>>,
-  window: Query<&Window, With<PrimaryWindow>>,
+  q_board: Query<Entity, With<Board>>,
 ) {
   for _ in respawn_reader.iter() {
     if q_player.get_single().is_ok() {
       return;
     }
-    spawn_player(&mut commands, window.get_single().unwrap());
+
+    let Ok(board) = q_board.get_single() else {return};
+    let player = (
+      Player,
+      DirectionQueue::default(),
+      SnakeBundle::new(
+        &mut commands,
+        board,
+        0.,
+        0.,
+        PLAYER_COLOR,
+        Direction::default(),
+        INITIAL_PLAYER_LENGTH,
+      ),
+    );
+    let player = commands.spawn(player).id();
+    commands.entity(board).add_child(player);
   }
 }
 
@@ -37,17 +55,21 @@ pub(super) fn queue_input(
   let Ok((mut direction, mut direction_queue)) = q_player.get_single_mut() else { return; };
 
   use Direction::*;
-  let new_direction = if *direction != Bottom && keyboard_input.pressed(KeyCode::W) {
+  let new_direction = if keyboard_input.pressed(KeyCode::W) {
     Top
-  } else if *direction != Right && keyboard_input.pressed(KeyCode::A) {
+  } else if keyboard_input.pressed(KeyCode::A) {
     Left
-  } else if *direction != Top && keyboard_input.pressed(KeyCode::S) {
+  } else if keyboard_input.pressed(KeyCode::S) {
     Bottom
-  } else if *direction != Left && keyboard_input.pressed(KeyCode::D) {
+  } else if keyboard_input.pressed(KeyCode::D) {
     Right
   } else {
     return;
   };
+
+  if new_direction == direction.opposite() {
+    return;
+  }
 
   if *direction == direction_queue.previous {
     *direction = new_direction;
@@ -69,21 +91,4 @@ pub(super) fn iter_input(
     }
     direction_queue.previous = *direction;
   }
-}
-
-fn spawn_player(commands: &mut Commands, window: &Window) {
-  let player = (
-    Player,
-    DirectionQueue::default(),
-    SnakeBundle::new(
-      commands,
-      window.width() / 2.,
-      window.height() / 2.,
-      PLAYER_COLOR,
-      Direction::default(),
-      INITIAL_PLAYER_LENGTH,
-    ),
-  );
-
-  commands.spawn(player);
 }
