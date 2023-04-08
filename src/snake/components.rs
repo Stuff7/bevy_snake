@@ -1,8 +1,33 @@
 use crate::board::{utils::create_cell_bundle, CELL_SIZE};
-use bevy::prelude::{
-  BuildChildren, Bundle, Color, Commands, Component, Entity, SpriteBundle, Vec3,
+use bevy::{
+  prelude::{
+    BuildChildren, Bundle, Color, Commands, Component, Deref, DerefMut, Entity, SpriteBundle,
+  },
+  time::{Timer, TimerMode},
 };
-use std::collections::VecDeque;
+use std::{collections::VecDeque, time::Duration};
+
+pub struct SnakeConfig {
+  pub x: f32,
+  pub y: f32,
+  pub serpentine_duration_ms: u64,
+  pub color: Color,
+  pub direction: Direction,
+  pub tail_length: usize,
+}
+
+impl Default for SnakeConfig {
+  fn default() -> Self {
+    Self {
+      color: Color::WHITE,
+      tail_length: 4,
+      serpentine_duration_ms: 100,
+      direction: Direction::default(),
+      x: 0.,
+      y: 0.,
+    }
+  }
+}
 
 #[derive(Bundle)]
 pub struct SnakeBundle {
@@ -10,26 +35,30 @@ pub struct SnakeBundle {
   direction: Direction,
   body: SnakeBody,
   living: Living,
+  speed: Speed,
   #[bundle]
   sprite_bundle: SpriteBundle,
 }
 
 impl SnakeBundle {
-  pub fn new(
-    commands: &mut Commands,
-    board: Entity,
-    x: f32,
-    y: f32,
-    color: Color,
-    direction: Direction,
-    tail_length: usize,
-  ) -> Self {
+  pub fn new(commands: &mut Commands, board: Entity, config: SnakeConfig) -> Self {
     Self {
       snake: Snake,
-      sprite_bundle: create_cell_bundle(color, x, y),
-      direction,
-      body: SnakeBody::new(commands, board, color, x, y, tail_length),
+      direction: config.direction,
+      body: SnakeBody::new(
+        commands,
+        board,
+        config.color,
+        config.x,
+        config.y,
+        config.tail_length,
+      ),
       living: Living,
+      speed: Speed(Timer::new(
+        Duration::from_millis(config.serpentine_duration_ms),
+        TimerMode::Repeating,
+      )),
+      sprite_bundle: create_cell_bundle(config.color, config.x, config.y),
     }
   }
 }
@@ -39,6 +68,9 @@ pub struct Snake;
 
 #[derive(Debug, Component)]
 pub struct Living;
+
+#[derive(Debug, Component, DerefMut, Deref)]
+pub struct Speed(Timer);
 
 #[derive(Debug, Component, Default, PartialEq, Clone, Copy)]
 pub enum Direction {
@@ -127,18 +159,4 @@ impl SnakeBody {
   pub(super) fn pop_tail(&mut self) -> Option<Entity> {
     self.0.pop_back()
   }
-}
-
-pub fn snake_crashed<H: Iterator<Item = (Entity, Vec3)>, B: Iterator<Item = Vec3>>(
-  mut head_iter: H,
-  mut body_iter: B,
-  snake_entity: Entity,
-  snake_head: Vec3,
-) -> bool {
-  head_iter.any(|(entity, head)| {
-    if entity == snake_entity {
-      return false;
-    }
-    head.distance(snake_head) < CELL_SIZE
-  }) || body_iter.any(|segment| segment.distance(snake_head) < CELL_SIZE)
 }

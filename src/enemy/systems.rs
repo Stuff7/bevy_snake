@@ -5,8 +5,9 @@ use crate::{
   color::generate_bright_color,
   food::components::Food,
   snake::{
-    components::{snake_crashed, Direction, Snake, SnakeBundle, SnakeSegment},
+    components::{Direction, Snake, SnakeBundle, SnakeConfig, SnakeSegment},
     events::{Serpentine, SnakeDeath},
+    utils::snake_crashed,
   },
 };
 use bevy::prelude::{
@@ -30,11 +31,13 @@ pub(super) fn respawn(
       SnakeBundle::new(
         &mut commands,
         board,
-        random::<f32>() * BOARD_SIZE - BOARD_SIZE / 2.,
-        random::<f32>() * BOARD_SIZE - BOARD_SIZE / 2.,
-        generate_bright_color(),
-        Direction::default(),
-        INITIAL_ENEMY_LENGTH,
+        SnakeConfig {
+          x: random::<f32>() * BOARD_SIZE - BOARD_SIZE / 2.,
+          y: random::<f32>() * BOARD_SIZE - BOARD_SIZE / 2.,
+          color: generate_bright_color(),
+          tail_length: INITIAL_ENEMY_LENGTH,
+          ..Default::default()
+        },
       ),
     );
     let enemy = commands.spawn(enemy).id();

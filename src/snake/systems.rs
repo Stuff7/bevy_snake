@@ -1,6 +1,7 @@
 use super::{
-  components::{snake_crashed, Direction, Living, Snake, SnakeBody, SnakeSegment},
+  components::{Direction, Living, Snake, SnakeBody, SnakeSegment, Speed},
   events::{BodySizeChange, Serpentine, SnakeDeath, SnakeSizeChange},
+  utils::snake_crashed,
 };
 use crate::{
   board::{components::Board, BOARD_SIZE, CELL_SIZE, HALF_CELL_SIZE},
@@ -8,19 +9,30 @@ use crate::{
   food::{components::Food, events::FoodEaten},
 };
 use bevy::prelude::{
-  BuildChildren, Commands, Entity, EventReader, EventWriter, Query, Sprite, Transform, With,
-  Without,
+  BuildChildren, Commands, Entity, EventReader, EventWriter, Query, Res, Sprite, Time, Transform,
+  With, Without,
 };
 
 pub(super) fn serpentine(
   mut serpentine_writer: EventWriter<Serpentine>,
   mut q_snake: Query<
-    (Entity, &mut Transform, &Direction, &mut SnakeBody),
+    (
+      Entity,
+      &mut Transform,
+      &Direction,
+      &mut SnakeBody,
+      &mut Speed,
+    ),
     (With<Snake>, With<Living>),
   >,
   mut q_snake_segment: Query<&mut Transform, (With<SnakeSegment>, Without<Snake>)>,
+  time: Res<Time>,
 ) {
-  for (snake, mut snake_head, direction, mut body) in q_snake.iter_mut() {
+  for (snake, mut snake_head, direction, mut body, mut speed) in &mut q_snake {
+    speed.tick(time.delta());
+    if !speed.finished() {
+      continue;
+    }
     if let Some(head_entity) = body.head() {
       let tail = if let Some(tail_entity) = body.pop_tail() {
         body.push_head(tail_entity);
@@ -65,7 +77,7 @@ pub(super) fn resize(
   q_board: Query<Entity, With<Board>>,
 ) {
   use BodySizeChange::*;
-  for (snake, size_change) in size_change_reader.iter() {
+  for (snake, size_change) in &mut size_change_reader {
     let Ok(board) = q_board.get_single() else {return};
     let Ok((mut body, head, direction, sprite)) = q_snake.get_mut(*snake) else {
       return;
@@ -140,7 +152,7 @@ pub(super) fn despawn(
   mut q_snake: Query<(Entity, &mut SnakeBody), (With<Snake>, Without<Living>)>,
   q_board: Query<Entity, With<Board>>,
 ) {
-  for (snake, mut body) in q_snake.iter_mut() {
+  for (snake, mut body) in &mut q_snake {
     let Ok(board) = q_board.get_single() else {return};
     let tail = body.pop_tail().unwrap_or_else(|| {
       snake_death_writer.send(SnakeDeath);

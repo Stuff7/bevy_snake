@@ -6,7 +6,7 @@ use super::{
 use crate::{
   board::components::Board,
   snake::{
-    components::{Direction, SnakeBundle},
+    components::{Direction, SnakeBundle, SnakeConfig},
     events::Serpentine,
   },
 };
@@ -36,11 +36,11 @@ pub(super) fn spawn(
       SnakeBundle::new(
         &mut commands,
         board,
-        0.,
-        0.,
-        PLAYER_COLOR,
-        Direction::default(),
-        INITIAL_PLAYER_LENGTH,
+        SnakeConfig {
+          color: PLAYER_COLOR,
+          tail_length: INITIAL_PLAYER_LENGTH,
+          ..Default::default()
+        },
       ),
     );
     let player = commands.spawn(player).id();
