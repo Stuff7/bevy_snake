@@ -47,7 +47,7 @@ pub(super) fn reposition(
   mut q_food: Query<(&Food, &mut Transform)>,
   mut q_snake: Query<&mut Speed, (With<Snake>, With<Living>)>,
 ) {
-  for FoodEaten { snake, food, .. } in food_eaten_reader.iter() {
+  for FoodEaten { snake, food } in food_eaten_reader.iter() {
     let Ok((effect, mut food)) = q_food.get_mut(*food) else {continue};
     food.translation = get_board_position(
       random::<f32>() * BOARD_SIZE - BOARD_SIZE / 2.,

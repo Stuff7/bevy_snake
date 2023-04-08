@@ -27,7 +27,7 @@ pub mod components {
   impl Distribution<Food> for Standard {
     fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Food {
       match rng.gen_range(0..=2) {
-        0 => Food::Swiftness,
+        0 => Food::None,
         1 => Food::Swiftness,
         _ => Food::ExtraGrowth,
       }
