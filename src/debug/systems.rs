@@ -18,10 +18,10 @@ pub(super) fn god_mode(
   use BodySizeChange::*;
   if keyboard_input.just_pressed(KeyCode::E) {
     let Ok(player) = q_player.get_single() else { return; };
-    size_change_writer.send((player, Grow(1)));
+    size_change_writer.send((player, Grow));
   } else if keyboard_input.just_pressed(KeyCode::Q) {
     let Ok(player) = q_player.get_single() else { return; };
-    size_change_writer.send((player, Shrink(1)));
+    size_change_writer.send((player, Shrink));
   } else if keyboard_input.just_pressed(KeyCode::R) {
     if q_player.get_single().is_ok() {
       return;

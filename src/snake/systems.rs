@@ -1,5 +1,5 @@
 use super::{
-  components::{Direction, Living, Snake, SnakeBody, SnakeSegment, Speed},
+  components::{Direction, Living, Nourished, Snake, SnakeBody, SnakeSegment, Speed},
   events::{BodySizeChange, Serpentine, SnakeDeath, SnakeSizeChange},
   utils::snake_crashed,
 };
@@ -78,36 +78,66 @@ pub(super) fn resize(
 ) {
   use BodySizeChange::*;
   for (snake, size_change) in &mut size_change_reader {
-    let Ok(board) = q_board.get_single() else {return};
+    let Ok(board) = q_board.get_single() else {continue};
     let Ok((mut body, head, direction, sprite)) = q_snake.get_mut(*snake) else {
-      return;
+      continue;
     };
     match size_change {
-      Grow(size) => {
-        if *size > 0 {
-          let tail = if let Some(tail) = body.tail() {
-            let Ok(tail) = q_snake_segment.get(tail) else { return; };
-            tail
-          } else {
-            head
-          }
-          .translation;
-          let direction = direction.opposite();
-          let tail_segments = (1..=*size).map(|i| {
-            let (x, y) =
-              (tail.x, tail.y).add(direction.xy(CELL_SIZE * i as f32, CELL_SIZE * i as f32));
-            SnakeSegment::spawn(&mut commands, board, sprite.color, x, y)
-          });
-          body.extend_tail(tail_segments);
+      Grow => {
+        let tail = if let Some(tail) = body.tail() {
+          let Ok(tail) = q_snake_segment.get(tail) else {continue};
+          tail
+        } else {
+          head
         }
+        .translation;
+        let direction = direction.opposite();
+        let (x, y) = (tail.x, tail.y).add(direction.xy(CELL_SIZE, CELL_SIZE));
+        let tail = SnakeSegment::spawn(&mut commands, board, sprite.color, x, y);
+        body.push_tail(tail);
       }
-      Shrink(size) => {
-        for _ in 0..*size {
-          let Some(tail) = body.pop_tail() else { return; };
-          commands.entity(tail).despawn();
-        }
+      Shrink => {
+        let Some(tail) = body.pop_tail() else { return; };
+        commands.entity(tail).despawn();
       }
     }
+  }
+}
+
+pub(super) fn grow(
+  mut commands: Commands,
+  mut q_snake: Query<
+    (
+      Entity,
+      &Sprite,
+      &Direction,
+      &mut Speed,
+      &mut SnakeBody,
+      &mut Nourished,
+    ),
+    (With<Snake>, With<Living>),
+  >,
+  q_snake_segment: Query<&Transform, With<SnakeSegment>>,
+  q_board: Query<Entity, With<Board>>,
+  time: Res<Time>,
+) {
+  for (snake, sprite, direction, mut speed, mut body, mut nourished_lvl) in &mut q_snake {
+    speed.tick(time.delta());
+    if !speed.finished() {
+      continue;
+    }
+    if nourished_lvl.0 == 0 {
+      commands.entity(snake).remove::<Nourished>();
+      return;
+    }
+    let Ok(board) = q_board.get_single() else {continue};
+    let Ok(tail) = q_snake_segment.get(body.tail().unwrap_or(snake)) else {continue};
+    let tail = tail.translation;
+    let direction = direction.opposite();
+    let (x, y) = (tail.x, tail.y).add(direction.xy(CELL_SIZE, CELL_SIZE));
+    let tail = SnakeSegment::spawn(&mut commands, board, sprite.color, x, y);
+    body.push_tail(tail);
+    nourished_lvl.0 -= 1;
   }
 }
 

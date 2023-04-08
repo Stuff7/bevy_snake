@@ -72,6 +72,9 @@ pub struct Living;
 #[derive(Debug, Component, DerefMut, Deref)]
 pub struct Speed(Timer);
 
+#[derive(Debug, Component)]
+pub struct Nourished(pub u32);
+
 #[derive(Debug, Component, Default, PartialEq, Clone, Copy)]
 pub enum Direction {
   Bottom,
@@ -152,8 +155,8 @@ impl SnakeBody {
     self.0.push_front(entity)
   }
 
-  pub(super) fn extend_tail(&mut self, tail_segments: impl IntoIterator<Item = Entity>) {
-    self.0.extend(tail_segments);
+  pub(super) fn push_tail(&mut self, entity: Entity) {
+    self.0.push_back(entity)
   }
 
   pub(super) fn pop_tail(&mut self) -> Option<Entity> {
