@@ -3,12 +3,13 @@ use super::{
   events::{BodySizeChange, Serpentine, SnakeDeath, SnakeSizeChange},
 };
 use crate::{
-  board::{BOARD_SIZE, CELL_SIZE, HALF_CELL_SIZE},
+  board::{components::Board, BOARD_SIZE, CELL_SIZE, HALF_CELL_SIZE},
   collections::TupleOps,
   food::{components::Food, events::FoodEaten},
 };
 use bevy::prelude::{
-  Commands, Entity, EventReader, EventWriter, Query, Sprite, Transform, With, Without,
+  BuildChildren, Commands, Entity, EventReader, EventWriter, Query, Sprite, Transform, With,
+  Without,
 };
 
 pub(super) fn serpentine(
@@ -61,9 +62,11 @@ pub(super) fn resize(
     (With<Snake>, With<Living>),
   >,
   q_snake_segment: Query<&Transform, With<SnakeSegment>>,
+  q_board: Query<Entity, With<Board>>,
 ) {
   use BodySizeChange::*;
   for (snake, size_change) in size_change_reader.iter() {
+    let Ok(board) = q_board.get_single() else {return};
     let Ok((mut body, head, direction, sprite)) = q_snake.get_mut(*snake) else {
       return;
     };
@@ -81,7 +84,7 @@ pub(super) fn resize(
           let tail_segments = (1..=*size).map(|i| {
             let (x, y) =
               (tail.x, tail.y).add(direction.xy(CELL_SIZE * i as f32, CELL_SIZE * i as f32));
-            SnakeSegment::spawn(&mut commands, sprite.color, x, y)
+            SnakeSegment::spawn(&mut commands, board, sprite.color, x, y)
           });
           body.extend_tail(tail_segments);
         }
@@ -135,13 +138,15 @@ pub(super) fn despawn(
   mut commands: Commands,
   mut snake_death_writer: EventWriter<SnakeDeath>,
   mut q_snake: Query<(Entity, &mut SnakeBody), (With<Snake>, Without<Living>)>,
+  q_board: Query<Entity, With<Board>>,
 ) {
   for (snake, mut body) in q_snake.iter_mut() {
-    commands
-      .entity(body.pop_tail().unwrap_or_else(|| {
-        snake_death_writer.send(SnakeDeath);
-        snake
-      }))
-      .despawn();
+    let Ok(board) = q_board.get_single() else {return};
+    let tail = body.pop_tail().unwrap_or_else(|| {
+      snake_death_writer.send(SnakeDeath);
+      snake
+    });
+    commands.entity(board).remove_children(&[tail]);
+    commands.entity(tail).despawn();
   }
 }

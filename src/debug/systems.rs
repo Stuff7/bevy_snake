@@ -1,4 +1,5 @@
 use crate::{
+  board::components::Board,
   food::components::Food,
   player::{components::Player, events::RespawnPlayer},
   snake::{
@@ -23,6 +24,22 @@ pub(super) fn god_mode(
     size_change_writer.send((player, Shrink(1)));
   } else if keyboard_input.just_pressed(KeyCode::R) {
     respawn_player_writer.send(RespawnPlayer);
+  }
+}
+
+pub(super) fn move_board(
+  mut q_board: Query<&mut Transform, With<Board>>,
+  keyboard_input: Res<Input<KeyCode>>,
+) {
+  let Ok(mut board) = q_board.get_single_mut() else {return};
+  if keyboard_input.just_pressed(KeyCode::Left) {
+    board.translation.x -= 10.;
+  } else if keyboard_input.just_pressed(KeyCode::Right) {
+    board.translation.x += 10.;
+  } else if keyboard_input.just_pressed(KeyCode::Up) {
+    board.translation.y += 10.;
+  } else if keyboard_input.just_pressed(KeyCode::Down) {
+    board.translation.y -= 10.;
   }
 }
 

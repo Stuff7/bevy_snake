@@ -1,9 +1,8 @@
 mod systems;
 pub mod utils;
 
-use bevy::prelude::{App, ClearColor, Color, Plugin, Vec2};
+use bevy::prelude::{App, Color, Plugin, Vec2};
 
-pub const BACKGROUND_COLOR: Color = Color::rgb(8. / 255., 8. / 255., 8. / 255.);
 pub const BOARD_COLOR: Color = Color::rgb(23. / 255., 23. / 255., 23. / 255.);
 pub const CELL_SIZE: f32 = 20.;
 pub const HALF_CELL_SIZE: f32 = CELL_SIZE / 2.;
@@ -15,9 +14,7 @@ pub struct BoardPlugin;
 
 impl Plugin for BoardPlugin {
   fn build(&self, app: &mut App) {
-    app
-      .insert_resource(ClearColor(BACKGROUND_COLOR))
-      .add_startup_system(systems::spawn_camera);
+    app.add_startup_system(systems::spawn);
   }
 }
 
@@ -26,7 +23,4 @@ pub mod components {
 
   #[derive(Debug, Component)]
   pub struct Board;
-
-  #[derive(Debug, Component)]
-  pub struct MainCamera;
 }

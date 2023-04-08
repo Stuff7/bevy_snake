@@ -3,6 +3,7 @@ pub mod color;
 mod debug;
 mod enemy;
 mod food;
+mod main_camera;
 mod player;
 mod snake;
 
@@ -13,19 +14,17 @@ use bevy::{
 
 fn main() {
   App::new()
-    .add_plugins(
-      DefaultPlugins
-        .set(WindowPlugin {
-          primary_window: Some(Window {
-            title: "Snake".into(),
-            resolution: (board::BOARD_SIZE, board::BOARD_SIZE).into(),
-            present_mode: PresentMode::AutoVsync,
-            ..Default::default()
-          }),
-          ..Default::default()
-        })
-        .add(board::BoardPlugin),
-    )
+    .add_plugins(DefaultPlugins.set(WindowPlugin {
+      primary_window: Some(Window {
+        title: "Snake".into(),
+        resolution: (board::BOARD_SIZE, board::BOARD_SIZE).into(),
+        present_mode: PresentMode::AutoVsync,
+        ..Default::default()
+      }),
+      ..Default::default()
+    }))
+    .add_plugin(main_camera::MainCameraPlugin)
+    .add_plugin(board::BoardPlugin)
     .add_plugin(player::PlayerPlugin)
     .add_plugin(enemy::EnemyPlugin)
     .add_plugin(snake::SnakePlugin)

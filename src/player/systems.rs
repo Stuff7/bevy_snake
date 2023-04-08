@@ -3,11 +3,16 @@ use super::{
   events::RespawnPlayer,
   INITIAL_PLAYER_LENGTH, PLAYER_COLOR,
 };
-use crate::snake::{
-  components::{Direction, SnakeBundle},
-  events::Serpentine,
+use crate::{
+  board::components::Board,
+  snake::{
+    components::{Direction, SnakeBundle},
+    events::Serpentine,
+  },
 };
-use bevy::prelude::{Commands, EventReader, EventWriter, Input, KeyCode, Query, Res, With};
+use bevy::prelude::{
+  BuildChildren, Commands, Entity, EventReader, EventWriter, Input, KeyCode, Query, Res, With,
+};
 
 pub(super) fn startup(mut respawn_writer: EventWriter<RespawnPlayer>) {
   respawn_writer.send(RespawnPlayer);
@@ -17,16 +22,20 @@ pub(super) fn spawn(
   mut commands: Commands,
   mut respawn_reader: EventReader<RespawnPlayer>,
   q_player: Query<(), With<Player>>,
+  q_board: Query<Entity, With<Board>>,
 ) {
   for _ in respawn_reader.iter() {
     if q_player.get_single().is_ok() {
       return;
     }
+
+    let Ok(board) = q_board.get_single() else {return};
     let player = (
       Player,
       DirectionQueue::default(),
       SnakeBundle::new(
         &mut commands,
+        board,
         0.,
         0.,
         PLAYER_COLOR,
@@ -34,8 +43,8 @@ pub(super) fn spawn(
         INITIAL_PLAYER_LENGTH,
       ),
     );
-
-    commands.spawn(player);
+    let player = commands.spawn(player).id();
+    commands.entity(board).add_child(player);
   }
 }
 
