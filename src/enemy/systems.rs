@@ -1,6 +1,6 @@
 use super::{components::Enemy, INITIAL_ENEMY_LENGTH};
 use crate::{
-  board::CELL_SIZE,
+  board::{BOARD_SIZE, CELL_SIZE},
   collections::TupleOps,
   color::generate_bright_color,
   food::components::Food,
@@ -9,23 +9,16 @@ use crate::{
     events::{Serpentine, SnakeDeath},
   },
 };
-use bevy::{
-  prelude::{Commands, Entity, EventReader, Query, Transform, Vec3, With, Without},
-  window::{PrimaryWindow, Window},
-};
+use bevy::prelude::{Commands, Entity, EventReader, Query, Transform, Vec3, With, Without};
 use rand::random;
 
-pub(super) fn spawn(mut commands: Commands, window: Query<&Window, With<PrimaryWindow>>) {
-  spawn_enemy(&mut commands, window.get_single().unwrap());
+pub(super) fn spawn(mut commands: Commands) {
+  spawn_enemy(&mut commands);
 }
 
-pub(super) fn respawn(
-  mut commands: Commands,
-  mut snake_death_reader: EventReader<SnakeDeath>,
-  window: Query<&Window, With<PrimaryWindow>>,
-) {
+pub(super) fn respawn(mut commands: Commands, mut snake_death_reader: EventReader<SnakeDeath>) {
   for _ in snake_death_reader.iter() {
-    spawn_enemy(&mut commands, window.get_single().unwrap());
+    spawn_enemy(&mut commands);
   }
 }
 
@@ -86,13 +79,13 @@ pub fn sort_direction_by_nearest(position: Vec3, target: Vec3) -> [Direction; 4]
   }
 }
 
-fn spawn_enemy(commands: &mut Commands, window: &Window) {
+fn spawn_enemy(commands: &mut Commands) {
   let enemy = (
     Enemy,
     SnakeBundle::new(
       commands,
-      random::<f32>() * window.width(),
-      random::<f32>() * window.height(),
+      random::<f32>() * BOARD_SIZE - BOARD_SIZE / 2.,
+      random::<f32>() * BOARD_SIZE - BOARD_SIZE / 2.,
       generate_bright_color(),
       Direction::default(),
       INITIAL_ENEMY_LENGTH,
