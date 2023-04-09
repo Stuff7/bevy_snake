@@ -1,13 +1,20 @@
-use crate::board::{utils::create_cell_bundle, CELL_SIZE};
+use crate::{
+  board::{utils::create_cell_bundle, CELL_SIZE},
+  scoreboard::components::{Name, Score},
+};
 use bevy::{
   prelude::{
     BuildChildren, Bundle, Color, Commands, Component, Deref, DerefMut, Entity, SpriteBundle,
   },
   time::{Timer, TimerMode},
 };
+use rand::Rng;
 use std::{collections::VecDeque, time::Duration};
 
+use super::utils::SNAKE_NAMES;
+
 pub struct SnakeConfig {
+  pub name: String,
   pub x: f32,
   pub y: f32,
   pub serpentine_duration_ms: u64,
@@ -19,6 +26,7 @@ pub struct SnakeConfig {
 impl Default for SnakeConfig {
   fn default() -> Self {
     Self {
+      name: SNAKE_NAMES[rand::thread_rng().gen_range(0..50)].to_string(),
       color: Color::WHITE,
       tail_length: 4,
       serpentine_duration_ms: 100,
@@ -32,6 +40,8 @@ impl Default for SnakeConfig {
 #[derive(Bundle)]
 pub struct SnakeBundle {
   snake: Snake,
+  name: Name,
+  score: Score,
   direction: Direction,
   body: SnakeBody,
   living: Living,
@@ -44,6 +54,8 @@ impl SnakeBundle {
   pub fn new(commands: &mut Commands, board: Entity, config: SnakeConfig) -> Self {
     Self {
       snake: Snake,
+      name: Name(config.name),
+      score: Score(config.tail_length),
       direction: config.direction,
       body: SnakeBody::new(
         commands,
@@ -141,6 +153,10 @@ impl SnakeBody {
         .map(|i| SnakeSegment::spawn(commands, board, color, x - CELL_SIZE * i as f32, y))
         .collect(),
     )
+  }
+
+  pub fn len(&self) -> usize {
+    self.0.len()
   }
 
   pub fn head(&self) -> Option<Entity> {

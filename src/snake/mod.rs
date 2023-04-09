@@ -8,6 +8,9 @@ use bevy::{
 };
 use std::time::Duration;
 
+pub const MAX_SERPENTINE_DURATION: Duration = Duration::from_millis(120);
+pub const MIN_SERPENTINE_DURATION: Duration = Duration::from_millis(30);
+
 pub struct SnakePlugin;
 
 impl Plugin for SnakePlugin {
@@ -20,6 +23,7 @@ impl Plugin for SnakePlugin {
       .add_system(systems::resize)
       .add_system(systems::grow)
       .add_system(systems::eat)
+      .add_system(systems::update_score)
       .add_system(systems::despawn.run_if(on_timer(Duration::from_secs_f32(0.1))))
       .add_system(systems::die);
   }

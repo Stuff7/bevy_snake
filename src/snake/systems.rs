@@ -7,6 +7,7 @@ use crate::{
   board::{components::Board, BOARD_SIZE, CELL_SIZE, HALF_CELL_SIZE},
   collections::TupleOps,
   food::{components::Food, events::FoodEaten},
+  scoreboard::components::Score,
 };
 use bevy::prelude::{
   BuildChildren, Commands, Entity, EventReader, EventWriter, Query, Res, Sprite, Time, Transform,
@@ -106,32 +107,26 @@ pub(super) fn resize(
 
 pub(super) fn grow(
   mut commands: Commands,
+  mut serpentine_reader: EventReader<Serpentine>,
   mut q_snake: Query<
-    (
-      Entity,
-      &Sprite,
-      &Direction,
-      &mut Speed,
-      &mut SnakeBody,
-      &mut Nourished,
-    ),
+    (&Sprite, &Direction, &mut SnakeBody, &mut Nourished),
     (With<Snake>, With<Living>),
   >,
   q_snake_segment: Query<&Transform, With<SnakeSegment>>,
   q_board: Query<Entity, With<Board>>,
-  time: Res<Time>,
 ) {
-  for (snake, sprite, direction, mut speed, mut body, mut nourished_lvl) in &mut q_snake {
-    speed.tick(time.delta());
-    if !speed.finished() {
-      continue;
-    }
+  for snake in &mut serpentine_reader {
+    let Ok(
+      (sprite, direction, mut body, mut nourished_lvl)
+    ) = q_snake.get_mut(snake.0) else {continue};
+
     if nourished_lvl.0 == 0 {
-      commands.entity(snake).remove::<Nourished>();
+      commands.entity(snake.0).remove::<Nourished>();
       return;
     }
+
     let Ok(board) = q_board.get_single() else {continue};
-    let Ok(tail) = q_snake_segment.get(body.tail().unwrap_or(snake)) else {continue};
+    let Ok(tail) = q_snake_segment.get(body.tail().unwrap_or(snake.0)) else {continue};
     let tail = tail.translation;
     let direction = direction.opposite();
     let (x, y) = (tail.x, tail.y).add(direction.xy(CELL_SIZE, CELL_SIZE));
@@ -172,6 +167,16 @@ pub(super) fn die(
       commands.entity(snake_entity).remove::<Living>();
       return;
     }
+  }
+}
+
+pub(super) fn update_score(
+  mut serpentine_reader: EventReader<Serpentine>,
+  mut q_snake: Query<(&SnakeBody, &mut Score), (With<Snake>, With<Living>)>,
+) {
+  for serpentine in &mut serpentine_reader {
+    let Ok((body, mut score)) = q_snake.get_mut(serpentine.0) else {continue};
+    score.0 = body.len();
   }
 }
 

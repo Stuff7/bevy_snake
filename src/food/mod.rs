@@ -7,7 +7,9 @@ pub struct FoodPlugin;
 impl Plugin for FoodPlugin {
   fn build(&self, app: &mut App) {
     app
+      .add_event::<events::SpawnFood>()
       .add_event::<events::FoodEaten>()
+      .add_startup_system(systems::startup)
       .add_system(systems::spawn)
       .add_system(systems::reposition);
   }
@@ -19,7 +21,7 @@ pub mod components {
 
   #[derive(Debug, Component, Copy, Clone)]
   pub enum Food {
-    None,
+    Regular,
     Swiftness,
     ExtraGrowth,
   }
@@ -27,7 +29,7 @@ pub mod components {
   impl Distribution<Food> for Standard {
     fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Food {
       match rng.gen_range(0..=2) {
-        0 => Food::None,
+        0 => Food::ExtraGrowth,
         1 => Food::Swiftness,
         _ => Food::ExtraGrowth,
       }
@@ -37,19 +39,22 @@ pub mod components {
   impl From<Food> for Color {
     fn from(food: Food) -> Self {
       match food {
-        Food::None => Color::rgb(1., 191. / 255., 72. / 255.),
-        Food::Swiftness => Color::rgb(135. / 255., 212. / 255., 235. / 255.),
-        Food::ExtraGrowth => Color::rgb(143. / 255., 135. / 255., 235. / 255.),
+        Food::Regular => Color::rgb_u8(255, 191, 72),
+        Food::Swiftness => Color::rgb_u8(135, 212, 235),
+        Food::ExtraGrowth => Color::rgb_u8(143, 135, 235),
       }
     }
   }
 }
 
 pub mod events {
+  use super::components::Food;
   use bevy::prelude::Entity;
 
   pub struct FoodEaten {
     pub snake: Entity,
     pub food: Entity,
   }
+
+  pub struct SpawnFood(pub Food);
 }

@@ -2,6 +2,7 @@ use crate::{
   board::components::Board,
   food::components::Food,
   player::{components::Player, events::RespawnPlayer},
+  scoreboard::components::Name,
   snake::{
     components::Snake,
     events::{BodySizeChange, SnakeSizeChange},
@@ -35,31 +36,28 @@ pub(super) fn move_board(
   keyboard_input: Res<Input<KeyCode>>,
 ) {
   let Ok(mut board) = q_board.get_single_mut() else {return};
-  if keyboard_input.just_pressed(KeyCode::Left) {
-    board.translation.x -= 10.;
-  } else if keyboard_input.just_pressed(KeyCode::Right) {
-    board.translation.x += 10.;
-  } else if keyboard_input.just_pressed(KeyCode::Up) {
-    board.translation.y += 10.;
-  } else if keyboard_input.just_pressed(KeyCode::Down) {
-    board.translation.y -= 10.;
+  if keyboard_input.pressed(KeyCode::Left) {
+    board.translation.x -= 1.;
+  } else if keyboard_input.pressed(KeyCode::Right) {
+    board.translation.x += 1.;
+  } else if keyboard_input.pressed(KeyCode::Up) {
+    board.translation.y += 1.;
+  } else if keyboard_input.pressed(KeyCode::Down) {
+    board.translation.y -= 1.;
   }
 }
 
 pub(super) fn print_debug_info(
   keyboard_input: Res<Input<KeyCode>>,
   q_entity: Query<Entity>,
-  q_snake: Query<&Transform, With<Snake>>,
+  q_snake: Query<&Name, With<Snake>>,
   q_food: Query<Entity, With<Food>>,
 ) {
   if keyboard_input.just_pressed(KeyCode::P) {
     let debug = [
       "=== === === DEBUG === === ===",
       &format!("Entity Count: {}", q_entity.iter().count()),
-      &format!(
-        "Snakes: {:#?}",
-        q_snake.iter().map(|t| t.translation).collect::<Vec<_>>()
-      ),
+      &format!("Snakes: {:#?}", q_snake.iter().collect::<Vec<_>>()),
       &format!("Food: {:#?}", q_food.get_single()),
     ]
     .join("\n");

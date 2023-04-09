@@ -5,6 +5,7 @@ mod enemy;
 mod food;
 mod main_camera;
 mod player;
+mod scoreboard;
 mod snake;
 
 use bevy::{
@@ -17,13 +18,14 @@ fn main() {
     .add_plugins(DefaultPlugins.set(WindowPlugin {
       primary_window: Some(Window {
         title: "Snake".into(),
-        resolution: (board::BOARD_SIZE, board::BOARD_SIZE).into(),
+        resolution: (1200., board::BOARD_SIZE).into(),
         present_mode: PresentMode::AutoVsync,
         ..Default::default()
       }),
       ..Default::default()
     }))
     .add_plugin(main_camera::MainCameraPlugin)
+    .add_plugin(scoreboard::ScoreboardPlugin)
     .add_plugin(board::BoardPlugin)
     .add_plugin(player::PlayerPlugin)
     .add_plugin(enemy::EnemyPlugin)

@@ -37,6 +37,7 @@ pub(super) fn spawn(
         &mut commands,
         board,
         SnakeConfig {
+          name: "Player".to_string(),
           color: PLAYER_COLOR,
           tail_length: INITIAL_PLAYER_LENGTH,
           ..Default::default()
@@ -82,13 +83,13 @@ pub(super) fn iter_input(
   mut serpentine_reader: EventReader<Serpentine>,
   mut q_player: Query<(&mut Direction, &mut DirectionQueue), With<Player>>,
 ) {
-  let Ok((mut direction, mut direction_queue)) = q_player.get_single_mut() else { return; };
-  for _ in serpentine_reader.iter() {
-    if *direction == direction_queue.previous {
-      if let Some(next_direction) = direction_queue.next.take() {
-        *direction = next_direction;
-      }
-    }
+  for snake in &mut serpentine_reader {
+    let Ok((mut direction, mut direction_queue)) = q_player.get_mut(snake.0) else {continue};
+    let should_take_next = *direction == direction_queue.previous;
     direction_queue.previous = *direction;
+    let Some(next_direction) = direction_queue.next.take() else {continue};
+    if should_take_next && next_direction != direction.opposite() {
+      *direction = next_direction;
+    }
   }
 }

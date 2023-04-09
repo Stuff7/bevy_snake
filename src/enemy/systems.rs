@@ -1,4 +1,4 @@
-use super::{components::Enemy, INITIAL_ENEMY_LENGTH};
+use super::{components::Enemy, events::SpawnEnemy, INITIAL_ENEMY_LENGTH};
 use crate::{
   board::{components::Board, BOARD_SIZE, CELL_SIZE},
   collections::TupleOps,
@@ -6,7 +6,7 @@ use crate::{
   food::components::Food,
   snake::{
     components::{Direction, Snake, SnakeBundle, SnakeConfig, SnakeSegment},
-    events::{Serpentine, SnakeDeath},
+    events::Serpentine,
     utils::snake_crashed,
   },
 };
@@ -15,16 +15,16 @@ use bevy::prelude::{
 };
 use rand::random;
 
-pub(super) fn startup(mut snake_death_writer: EventWriter<SnakeDeath>) {
-  snake_death_writer.send(SnakeDeath);
+pub(super) fn respawn(mut spawn_enemy_writer: EventWriter<SpawnEnemy>) {
+  spawn_enemy_writer.send(SpawnEnemy);
 }
 
-pub(super) fn respawn(
+pub(super) fn spawn(
   mut commands: Commands,
-  mut snake_death_reader: EventReader<SnakeDeath>,
+  mut spawn_enemy_reader: EventReader<SpawnEnemy>,
   q_board: Query<Entity, With<Board>>,
 ) {
-  for _ in snake_death_reader.iter() {
+  for _ in spawn_enemy_reader.iter() {
     let Ok(board) = q_board.get_single() else {return};
     let enemy = (
       Enemy,
@@ -62,7 +62,7 @@ pub(super) fn seek_food(
       if nearest == direction.opposite() {
         continue;
       }
-      let (x, y) = (head.x, head.y).add(nearest.xy(CELL_SIZE + 4., CELL_SIZE + 4.));
+      let (x, y) = (head.x, head.y).add(nearest.xy(CELL_SIZE, CELL_SIZE));
       let head = Vec3::new(x, y, 0.);
       if !snake_crashed(
         q_snake_head.iter().map(|h| (h.0, h.1.translation)),
