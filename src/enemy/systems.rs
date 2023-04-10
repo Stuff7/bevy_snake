@@ -1,6 +1,6 @@
 use super::{components::Enemy, events::SpawnEnemy, INITIAL_ENEMY_LENGTH};
 use crate::{
-  board::{components::Board, BOARD_SIZE, CELL_SIZE},
+  board::{components::Board, resources::GameBoard, CELL_SIZE},
   collections::TupleOps,
   color::generate_bright_color,
   food::components::Food,
@@ -11,7 +11,8 @@ use crate::{
   },
 };
 use bevy::prelude::{
-  BuildChildren, Commands, Entity, EventReader, EventWriter, Query, Transform, Vec3, With, Without,
+  BuildChildren, Commands, Entity, EventReader, EventWriter, Query, Res, Transform, Vec3, With,
+  Without,
 };
 use rand::random;
 
@@ -23,6 +24,7 @@ pub(super) fn spawn(
   mut commands: Commands,
   mut spawn_enemy_reader: EventReader<SpawnEnemy>,
   q_board: Query<Entity, With<Board>>,
+  game_board: Res<GameBoard>,
 ) {
   for _ in spawn_enemy_reader.iter() {
     let Ok(board) = q_board.get_single() else {return};
@@ -32,8 +34,8 @@ pub(super) fn spawn(
         &mut commands,
         board,
         SnakeConfig {
-          x: random::<f32>() * BOARD_SIZE - BOARD_SIZE / 2.,
-          y: random::<f32>() * BOARD_SIZE - BOARD_SIZE / 2.,
+          x: (random::<f32>() - 0.5) * game_board.width,
+          y: (random::<f32>() - 0.5) * game_board.height,
           color: generate_bright_color(),
           tail_length: INITIAL_ENEMY_LENGTH,
           ..Default::default()

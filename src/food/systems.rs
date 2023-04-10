@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use super::{
   components::Food,
   events::{FoodEaten, SpawnFood},
@@ -7,8 +5,8 @@ use super::{
 use crate::{
   board::{
     components::Board,
+    resources::GameBoard,
     utils::{create_cell_bundle, get_board_position},
-    BOARD_SIZE,
   },
   snake::{
     components::{Living, Nourished, Snake, Speed},
@@ -17,9 +15,10 @@ use crate::{
   },
 };
 use bevy::prelude::{
-  BuildChildren, Commands, Entity, EventReader, EventWriter, Query, Transform, With,
+  BuildChildren, Commands, Entity, EventReader, EventWriter, Query, Res, Transform, With,
 };
 use rand::random;
+use std::time::Duration;
 
 pub(super) fn startup(mut spawn_food_writer: EventWriter<SpawnFood>) {
   spawn_food_writer.send(SpawnFood(Food::Regular));
@@ -31,6 +30,7 @@ pub(super) fn spawn(
   mut commands: Commands,
   mut spawn_food_reader: EventReader<SpawnFood>,
   q_board: Query<Entity, With<Board>>,
+  game_board: Res<GameBoard>,
 ) {
   for SpawnFood(food) in &mut spawn_food_reader {
     let Ok(board) = q_board.get_single() else {continue};
@@ -39,8 +39,8 @@ pub(super) fn spawn(
         *food,
         create_cell_bundle(
           (*food).into(),
-          random::<f32>() * BOARD_SIZE - BOARD_SIZE / 2.,
-          random::<f32>() * BOARD_SIZE - BOARD_SIZE / 2.,
+          (random::<f32>() - 0.5) * game_board.width,
+          (random::<f32>() - 0.5) * game_board.height,
         ),
       ))
       .id();
@@ -49,18 +49,28 @@ pub(super) fn spawn(
 }
 
 pub(super) fn reposition(
+  mut food_eaten_reader: EventReader<FoodEaten>,
+  mut q_food: Query<&mut Transform>,
+  game_board: Res<GameBoard>,
+) {
+  for eaten in food_eaten_reader.iter() {
+    let Ok(mut food) = q_food.get_mut(eaten.food) else {continue};
+    food.translation = get_board_position(
+      (random::<f32>() - 0.5) * game_board.width,
+      (random::<f32>() - 0.5) * game_board.height,
+    );
+  }
+}
+
+pub(super) fn apply_effects(
   mut commands: Commands,
   mut body_size_change_writer: EventWriter<SnakeSizeChange>,
   mut food_eaten_reader: EventReader<FoodEaten>,
-  mut q_food: Query<(&Food, &mut Transform)>,
+  mut q_effect: Query<&Food>,
   mut q_snake: Query<(&mut Speed, Option<&mut Nourished>), (With<Snake>, With<Living>)>,
 ) {
   for FoodEaten { snake, food } in food_eaten_reader.iter() {
-    let Ok((effect, mut food)) = q_food.get_mut(*food) else {continue};
-    food.translation = get_board_position(
-      random::<f32>() * BOARD_SIZE - BOARD_SIZE / 2.,
-      random::<f32>() * BOARD_SIZE - BOARD_SIZE / 2.,
-    );
+    let Ok(effect) = q_effect.get_mut(*food) else {continue};
     match *effect {
       Food::Regular => body_size_change_writer.send((*snake, BodySizeChange::Grow)),
       Food::ExtraGrowth => {

@@ -3,10 +3,12 @@ mod systems;
 pub mod utils;
 
 use bevy::{
-  prelude::{App, IntoSystemConfig, Plugin},
+  prelude::{in_state, App, IntoSystemConfig, Plugin},
   time::common_conditions::on_timer,
 };
 use std::time::Duration;
+
+use crate::state::GameState;
 
 pub const MAX_SERPENTINE_DURATION: Duration = Duration::from_millis(120);
 pub const MIN_SERPENTINE_DURATION: Duration = Duration::from_millis(30);
@@ -19,7 +21,7 @@ impl Plugin for SnakePlugin {
       .add_event::<events::SnakeSizeChange>()
       .add_event::<events::Serpentine>()
       .add_event::<events::SnakeDeath>()
-      .add_system(systems::serpentine)
+      .add_system(systems::serpentine.run_if(in_state(GameState::Playing)))
       .add_system(systems::resize)
       .add_system(systems::grow)
       .add_system(systems::eat)

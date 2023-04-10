@@ -1,33 +1,73 @@
+use super::{
+  components::{Board, BoardSprite},
+  resources::GameBoard,
+  BOARD_COLOR, BOARD_HEIGHT_FACTOR, BOARD_WIDTH_FACTOR, CELL_SIZE, HALF_CELL_SIZE,
+};
 use bevy::{
-  prelude::{BuildChildren, Commands, Query, SpatialBundle, Sprite, Transform, Vec2, With},
-  sprite::SpriteBundle,
-  window::{PrimaryWindow, Window},
+  prelude::{
+    BuildChildren, Children, Commands, DetectChanges, EventReader, Parent, Query, Res, ResMut,
+    SpatialBundle, Sprite, SpriteBundle, Transform, Vec2, With,
+  },
+  window::WindowResized,
 };
 
-use super::{components::Board, BOARD_COLOR, BOARD_SIZE};
-
-pub(super) fn spawn(mut commands: Commands, window: Query<&Window, With<PrimaryWindow>>) {
-  let window = window.get_single().unwrap();
-
+pub(super) fn spawn(mut commands: Commands) {
   let board = commands
-    .spawn(SpriteBundle {
-      sprite: Sprite {
-        color: BOARD_COLOR,
-        custom_size: Some(Vec2::new(BOARD_SIZE, BOARD_SIZE)),
+    .spawn((
+      BoardSprite,
+      SpriteBundle {
+        sprite: Sprite {
+          color: BOARD_COLOR,
+          custom_size: Some(Vec2::ZERO),
+          ..Default::default()
+        },
         ..Default::default()
       },
-      ..Default::default()
-    })
+    ))
     .id();
 
   commands
-    .spawn((
-      Board,
-      SpatialBundle::from_transform(Transform::from_xyz(
-        window.width() / 2. - BOARD_SIZE / 2.,
-        0.,
-        0.,
-      )),
-    ))
+    .spawn((Board, SpatialBundle::default()))
     .add_child(board);
+}
+
+pub(super) fn resize_game_board(
+  mut resize_reader: EventReader<WindowResized>,
+  mut q_board_sprite: Query<&mut Sprite, With<BoardSprite>>,
+  mut q_board_position: Query<&mut Transform, With<Board>>,
+  mut game_board: ResMut<GameBoard>,
+) {
+  for resize in &mut resize_reader {
+    let Ok(mut board_transform) = q_board_position.get_single_mut() else {return};
+    let Ok(mut board_sprite) = q_board_sprite.get_single_mut() else {return};
+    let Some(ref mut board_sprite) = board_sprite.custom_size else {return};
+    board_transform.translation.x = resize.width * 0.1;
+    game_board.width = 2. * CELL_SIZE * (resize.width * BOARD_WIDTH_FACTOR).floor();
+    game_board.height = 2. * CELL_SIZE * (resize.height * BOARD_HEIGHT_FACTOR).floor();
+    board_sprite.x = game_board.width;
+    board_sprite.y = game_board.height;
+  }
+}
+
+pub(super) fn constraint_children(
+  q_board: Query<&Children, With<Board>>,
+  mut q_children: Query<&mut Transform, With<Parent>>,
+  game_board: Res<GameBoard>,
+) {
+  if game_board.is_changed() {
+    let Ok(children) = q_board.get_single() else {return};
+    for child in children.iter() {
+      let Ok(mut child) = q_children.get_mut(*child) else {return};
+      if child.translation.x > game_board.width / 2. {
+        child.translation.x = game_board.width / 2. - HALF_CELL_SIZE;
+      } else if child.translation.x < game_board.width / -2. {
+        child.translation.x = HALF_CELL_SIZE - game_board.width / 2.;
+      }
+      if child.translation.y > game_board.height / 2. {
+        child.translation.y = game_board.height / 2. - HALF_CELL_SIZE;
+      } else if child.translation.y < game_board.height / -2. {
+        child.translation.y = HALF_CELL_SIZE - game_board.height / 2.;
+      }
+    }
+  }
 }

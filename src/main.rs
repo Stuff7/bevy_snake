@@ -1,5 +1,5 @@
 mod board;
-pub mod color;
+mod color;
 mod debug;
 mod enemy;
 mod food;
@@ -18,12 +18,13 @@ fn main() {
     .add_plugins(DefaultPlugins.set(WindowPlugin {
       primary_window: Some(Window {
         title: "Snake".into(),
-        resolution: (1200., board::BOARD_SIZE).into(),
+        resolution: (800., 800.).into(),
         present_mode: PresentMode::AutoVsync,
         ..Default::default()
       }),
       ..Default::default()
     }))
+    .add_state::<state::GameState>()
     .add_plugin(main_camera::MainCameraPlugin)
     .add_plugin(scoreboard::ScoreboardPlugin)
     .add_plugin(board::BoardPlugin)
@@ -33,6 +34,17 @@ fn main() {
     .add_plugin(food::FoodPlugin)
     .add_plugin(debug::DebugPlugin)
     .run();
+}
+
+pub mod state {
+  use bevy::prelude::States;
+
+  #[derive(States, Debug, Clone, Copy, Eq, PartialEq, Hash, Default)]
+  pub enum GameState {
+    #[default]
+    Paused,
+    Playing,
+  }
 }
 
 mod collections {

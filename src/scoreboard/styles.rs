@@ -6,7 +6,6 @@ use bevy::prelude::{
 pub(super) const SCORE_BOARD_BACKGROUND: Color = Color::rgb(15. / 255., 15. / 255., 15. / 255.);
 pub(super) const SCORE_BOARD: Style = Style {
   flex_direction: FlexDirection::Column,
-  justify_content: JustifyContent::Center,
   align_items: AlignItems::Center,
   size: Size::new(Val::Percent(20.), Val::Auto),
   gap: Size::new(Val::Px(8.), Val::Px(8.)),
@@ -26,7 +25,7 @@ pub(super) const PLACE: Style = Style {
 pub(super) fn text(asset_server: &Res<AssetServer>) -> TextStyle {
   TextStyle {
     font: asset_server.load("fonts/UbuntuMono-Regular.ttf"),
-    font_size: 32.0,
+    font_size: 16.0,
     color: Color::default(),
   }
 }

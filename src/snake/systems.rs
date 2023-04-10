@@ -4,10 +4,10 @@ use super::{
   utils::snake_crashed,
 };
 use crate::{
-  board::{components::Board, BOARD_SIZE, CELL_SIZE, HALF_CELL_SIZE},
+  board::{components::Board, resources::GameBoard, CELL_SIZE, HALF_CELL_SIZE},
   collections::TupleOps,
   food::{components::Food, events::FoodEaten},
-  scoreboard::components::Score,
+  scoreboard::components::{Name, Score},
 };
 use bevy::prelude::{
   BuildChildren, Commands, Entity, EventReader, EventWriter, Query, Res, Sprite, Time, Transform,
@@ -27,6 +27,7 @@ pub(super) fn serpentine(
     (With<Snake>, With<Living>),
   >,
   mut q_snake_segment: Query<&mut Transform, (With<SnakeSegment>, Without<Snake>)>,
+  game_board: Res<GameBoard>,
   time: Res<Time>,
 ) {
   for (snake, mut snake_head, direction, mut body, mut speed) in &mut q_snake {
@@ -49,8 +50,7 @@ pub(super) fn serpentine(
     snake_head.translation.x += x;
     snake_head.translation.y += y;
 
-    let width = BOARD_SIZE;
-    let height = BOARD_SIZE;
+    let GameBoard { width, height } = *game_board;
 
     if snake_head.translation.x >= width / 2. {
       snake_head.translation.x = HALF_CELL_SIZE - width / 2.;
@@ -163,7 +163,6 @@ pub(super) fn die(
       snake_entity,
       snake_head,
     ) {
-      println!("Snake {snake_entity:?} DIED");
       commands.entity(snake_entity).remove::<Living>();
       return;
     }
@@ -183,12 +182,13 @@ pub(super) fn update_score(
 pub(super) fn despawn(
   mut commands: Commands,
   mut snake_death_writer: EventWriter<SnakeDeath>,
-  mut q_snake: Query<(Entity, &mut SnakeBody), (With<Snake>, Without<Living>)>,
+  mut q_snake: Query<(Entity, &Name, &mut SnakeBody), (With<Snake>, Without<Living>)>,
   q_board: Query<Entity, With<Board>>,
 ) {
-  for (snake, mut body) in &mut q_snake {
+  for (snake, name, mut body) in &mut q_snake {
     let Ok(board) = q_board.get_single() else {return};
     let tail = body.pop_tail().unwrap_or_else(|| {
+      println!("Snake {} DIED", name.0);
       snake_death_writer.send(SnakeDeath);
       snake
     });

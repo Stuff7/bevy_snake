@@ -7,14 +7,19 @@ use crate::{
     components::Snake,
     events::{BodySizeChange, SnakeSizeChange},
   },
+  state::GameState,
 };
-use bevy::prelude::{Entity, EventWriter, Input, KeyCode, Query, Res, Transform, With};
+use bevy::prelude::{
+  Entity, EventWriter, Input, KeyCode, NextState, Query, Res, ResMut, State, Transform, With,
+};
 
 pub(super) fn god_mode(
   mut respawn_player_writer: EventWriter<RespawnPlayer>,
   mut size_change_writer: EventWriter<SnakeSizeChange>,
   q_player: Query<Entity, With<Player>>,
   keyboard_input: Res<Input<KeyCode>>,
+  game_state: Res<State<GameState>>,
+  mut next_state: ResMut<NextState<GameState>>,
 ) {
   use BodySizeChange::*;
   if keyboard_input.just_pressed(KeyCode::E) {
@@ -28,6 +33,12 @@ pub(super) fn god_mode(
       return;
     }
     respawn_player_writer.send(RespawnPlayer);
+  } else if keyboard_input.just_pressed(KeyCode::P) {
+    next_state.set(if game_state.0 == GameState::Paused {
+      GameState::Playing
+    } else {
+      GameState::Paused
+    });
   }
 }
 
@@ -53,7 +64,7 @@ pub(super) fn print_debug_info(
   q_snake: Query<&Name, With<Snake>>,
   q_food: Query<Entity, With<Food>>,
 ) {
-  if keyboard_input.just_pressed(KeyCode::P) {
+  if keyboard_input.just_pressed(KeyCode::O) {
     let debug = [
       "=== === === DEBUG === === ===",
       &format!("Entity Count: {}", q_entity.iter().count()),
