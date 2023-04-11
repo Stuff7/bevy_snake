@@ -4,7 +4,7 @@ use crate::{
 };
 use bevy::{
   prelude::{
-    BuildChildren, Bundle, Color, Commands, Component, Deref, DerefMut, Entity, SpriteBundle,
+    BuildChildren, Bundle, Color, Commands, Component, Deref, DerefMut, Entity, SpriteBundle, Vec3,
   },
   time::{Timer, TimerMode},
 };
@@ -179,3 +179,6 @@ impl SnakeBody {
     self.0.pop_back()
   }
 }
+
+#[derive(Debug, Component, Default)]
+pub struct Seeker(pub Vec3);

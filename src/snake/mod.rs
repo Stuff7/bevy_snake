@@ -26,7 +26,10 @@ impl Plugin for SnakePlugin {
       .add_system(systems::grow)
       .add_system(systems::eat)
       .add_system(systems::update_score)
-      .add_system(systems::despawn.run_if(on_timer(Duration::from_secs_f32(0.1))))
+      .add_system(systems::seek)
+      .add_system(systems::despawn.run_if(on_timer(
+        MIN_SERPENTINE_DURATION + (MAX_SERPENTINE_DURATION - MIN_SERPENTINE_DURATION) / 2,
+      )))
       .add_system(systems::die);
   }
 }

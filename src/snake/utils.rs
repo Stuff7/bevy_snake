@@ -1,5 +1,10 @@
-use crate::board::CELL_SIZE;
+use crate::{
+  board::{resources::GameBoard, CELL_SIZE},
+  collections::ExternalOps,
+};
 use bevy::prelude::{Entity, Vec3};
+
+use super::components::Direction;
 
 pub const SNAKE_NAMES: [&str; 50] = [
   "Slytherin",
@@ -66,4 +71,51 @@ pub fn snake_crashed<H: Iterator<Item = (Entity, Vec3)>, B: Iterator<Item = Vec3
     }
     head.distance(snake_head) < CELL_SIZE
   }) || body_iter.any(|segment| segment.distance(snake_head) < CELL_SIZE)
+}
+
+pub fn sort_direction_by_nearest(
+  position: Vec3,
+  target: Vec3,
+  game_board: &GameBoard,
+) -> [Direction; 4] {
+  use Direction::*;
+  let direction_h = if position.x > target.x { Left } else { Right };
+  let (x, y) = (position.x, position.y).add(direction_h.xy(CELL_SIZE, CELL_SIZE));
+  let distance_h = target.distance(Vec3::new(x, y, 0.));
+
+  let direction_v = if position.y > target.y { Bottom } else { Top };
+  let (x, y) = (position.x, position.y).add(direction_v.xy(CELL_SIZE, CELL_SIZE));
+  let distance_v = target.distance(Vec3::new(x, y, 0.));
+
+  if distance_h < distance_v {
+    if distance_h > game_board.width / 2. {
+      [
+        direction_h.opposite(),
+        direction_h,
+        direction_v,
+        direction_v.opposite(),
+      ]
+    } else {
+      [
+        direction_h,
+        direction_v,
+        direction_v.opposite(),
+        direction_h.opposite(),
+      ]
+    }
+  } else if distance_v > game_board.height / 2. {
+    [
+      direction_v.opposite(),
+      direction_v,
+      direction_h,
+      direction_h.opposite(),
+    ]
+  } else {
+    [
+      direction_v,
+      direction_h,
+      direction_h.opposite(),
+      direction_v.opposite(),
+    ]
+  }
 }

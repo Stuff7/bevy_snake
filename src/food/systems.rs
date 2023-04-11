@@ -76,20 +76,25 @@ pub(super) fn apply_effects(
       Food::ExtraGrowth => {
         let Ok((mut speed, nourished)) = q_snake.get_mut(*snake) else {continue};
         let serpentine_duration = speed.duration();
-        if serpentine_duration < MAX_SERPENTINE_DURATION {
-          speed.set_duration(serpentine_duration + Duration::from_millis(5));
-        }
-        if let Some(mut nourished) = nourished {
-          nourished.0 += 4;
+        let nourishment = if serpentine_duration < MAX_SERPENTINE_DURATION {
+          speed.set_duration(serpentine_duration + Duration::from_millis(10));
+          4
         } else {
-          commands.entity(*snake).insert(Nourished(4));
+          8
+        };
+        if let Some(mut nourished) = nourished {
+          nourished.0 += nourishment;
+        } else {
+          commands.entity(*snake).insert(Nourished(nourishment));
         }
       }
       Food::Swiftness => {
         let Ok((mut speed, _)) = q_snake.get_mut(*snake) else {continue};
         let serpentine_duration = speed.duration();
         if serpentine_duration > MIN_SERPENTINE_DURATION {
-          speed.set_duration(serpentine_duration - Duration::from_millis(5));
+          speed.set_duration(serpentine_duration - Duration::from_millis(10));
+        } else {
+          body_size_change_writer.send((*snake, BodySizeChange::Grow));
         }
       }
     }

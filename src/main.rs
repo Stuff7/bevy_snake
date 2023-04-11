@@ -48,11 +48,11 @@ pub mod state {
 }
 
 mod collections {
-  pub trait TupleOps {
+  pub trait ExternalOps {
     fn add(&self, rhs: Self) -> Self;
   }
 
-  impl TupleOps for (f32, f32) {
+  impl ExternalOps for (f32, f32) {
     fn add(&self, rhs: Self) -> Self {
       (self.0 + rhs.0, self.1 + rhs.1)
     }

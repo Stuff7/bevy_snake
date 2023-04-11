@@ -1,17 +1,17 @@
 use super::{
-  components::{Direction, Living, Nourished, Snake, SnakeBody, SnakeSegment, Speed},
+  components::{Direction, Living, Nourished, Seeker, Snake, SnakeBody, SnakeSegment, Speed},
   events::{BodySizeChange, Serpentine, SnakeDeath, SnakeSizeChange},
-  utils::snake_crashed,
+  utils::{snake_crashed, sort_direction_by_nearest},
 };
 use crate::{
   board::{components::Board, resources::GameBoard, CELL_SIZE, HALF_CELL_SIZE},
-  collections::TupleOps,
+  collections::ExternalOps,
   food::{components::Food, events::FoodEaten},
   scoreboard::components::{Name, Score},
 };
 use bevy::prelude::{
   BuildChildren, Commands, Entity, EventReader, EventWriter, Query, Res, Sprite, Time, Transform,
-  With, Without,
+  Vec3, With, Without,
 };
 
 pub(super) fn serpentine(
@@ -188,11 +188,39 @@ pub(super) fn despawn(
   for (snake, name, mut body) in &mut q_snake {
     let Ok(board) = q_board.get_single() else {return};
     let tail = body.pop_tail().unwrap_or_else(|| {
-      println!("Snake {} DIED", name.0);
+      println!("☠️ {}", name.0);
       snake_death_writer.send(SnakeDeath);
       snake
     });
     commands.entity(board).remove_children(&[tail]);
     commands.entity(tail).despawn();
+  }
+}
+
+pub(super) fn seek(
+  mut serpentine_reader: EventReader<Serpentine>,
+  mut q_seeker: Query<(&Seeker, &mut Direction)>,
+  q_snake_head: Query<(Entity, &Transform), (With<Snake>, Without<SnakeSegment>)>,
+  q_snake_segment: Query<&Transform, With<SnakeSegment>>,
+  game_board: Res<GameBoard>,
+) {
+  for Serpentine(enemy_entity, head) in serpentine_reader.iter().copied() {
+    let Ok((seeker, mut direction)) = q_seeker.get_mut(enemy_entity) else { continue; };
+    for nearest in sort_direction_by_nearest(head, seeker.0, &game_board) {
+      if nearest == direction.opposite() {
+        continue;
+      }
+      let (x, y) = (head.x, head.y).add(nearest.xy(CELL_SIZE, CELL_SIZE));
+      let head = Vec3::new(x, y, 0.);
+      if !snake_crashed(
+        q_snake_head.iter().map(|h| (h.0, h.1.translation)),
+        q_snake_segment.iter().map(|h| h.translation),
+        enemy_entity,
+        head,
+      ) {
+        *direction = nearest;
+        break;
+      }
+    }
   }
 }

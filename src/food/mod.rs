@@ -20,7 +20,7 @@ pub mod components {
   use bevy::prelude::{Color, Component};
   use rand::{distributions::Standard, prelude::Distribution, Rng};
 
-  #[derive(Debug, Component, Copy, Clone)]
+  #[derive(Debug, Component, Copy, Clone, PartialEq, Eq)]
   pub enum Food {
     Regular,
     Swiftness,

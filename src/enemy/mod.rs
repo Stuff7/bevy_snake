@@ -1,21 +1,26 @@
 mod systems;
 
-use bevy::prelude::{on_event, App, IntoSystemConfig, Plugin};
-
-use crate::snake::events::SnakeDeath;
+use bevy::prelude::{App, Color, Plugin};
 
 pub(super) const INITIAL_ENEMY_LENGTH: usize = 4;
+pub(super) const EATER_COLOR: Color = Color::rgb(1., 1., 1.);
+pub(super) const KILLER_COLOR: Color = Color::rgb(202. / 255., 98. / 255., 157. / 255.);
+pub(super) const SPEEDSTER_COLOR: Color = Color::rgb(99. / 255., 250. / 255., 250. / 255.);
+pub(super) const GLUTTON_COLOR: Color = Color::rgb(254. / 255., 165. / 255., 1. / 255.);
 
 pub struct EnemyPlugin;
 
 impl Plugin for EnemyPlugin {
   fn build(&self, app: &mut App) {
     app
-      .add_event::<events::SpawnEnemy>()
-      .add_startup_system(systems::respawn)
-      .add_system(systems::spawn)
-      .add_system(systems::respawn.run_if(on_event::<SnakeDeath>()))
-      .add_system(systems::seek_food);
+      .add_system(systems::spawn_eater)
+      .add_system(systems::spawn_killer)
+      .add_system(systems::spawn_speedster)
+      .add_system(systems::spawn_glutton)
+      .add_system(systems::seek_food)
+      .add_system(systems::seek_snake)
+      .add_system(systems::seek_speed)
+      .add_system(systems::seek_nourishment);
   }
 }
 
@@ -24,8 +29,16 @@ pub mod components {
 
   #[derive(Component)]
   pub struct Enemy;
-}
 
-pub mod events {
-  pub struct SpawnEnemy;
+  #[derive(Component)]
+  pub struct Eater;
+
+  #[derive(Component)]
+  pub struct Killer;
+
+  #[derive(Component)]
+  pub struct Speedster;
+
+  #[derive(Component)]
+  pub struct Glutton;
 }
