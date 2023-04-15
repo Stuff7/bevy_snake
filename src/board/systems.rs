@@ -1,17 +1,24 @@
 use super::{
   components::{Board, BoardSprite},
   resources::GameBoard,
-  BOARD_COLOR, BOARD_HEIGHT_FACTOR, BOARD_WIDTH_FACTOR, CELL_SIZE, HALF_CELL_SIZE,
+  BOARD_COLOR, HALF_CELL_SIZE,
 };
 use bevy::{
   prelude::{
     BuildChildren, Children, Commands, DetectChanges, EventReader, Parent, Query, Res, ResMut,
     SpatialBundle, Sprite, SpriteBundle, Transform, Vec2, With,
   },
-  window::WindowResized,
+  window::{PrimaryWindow, Window, WindowResized},
 };
 
-pub(super) fn spawn(mut commands: Commands) {
+pub(super) fn spawn(
+  mut commands: Commands,
+  window: Query<&Window, With<PrimaryWindow>>,
+  mut game_board: ResMut<GameBoard>,
+) {
+  let window = window.get_single().unwrap();
+  game_board.resize(window.width(), window.height());
+
   let board = commands
     .spawn((
       BoardSprite,
@@ -42,8 +49,7 @@ pub(super) fn resize_game_board(
     let Ok(mut board_sprite) = q_board_sprite.get_single_mut() else {return};
     let Some(ref mut board_sprite) = board_sprite.custom_size else {return};
     board_transform.translation.x = resize.width * 0.1;
-    game_board.width = 2. * CELL_SIZE * (resize.width * BOARD_WIDTH_FACTOR).floor();
-    game_board.height = 2. * CELL_SIZE * (resize.height * BOARD_HEIGHT_FACTOR).floor();
+    game_board.resize(resize.width, resize.height);
     board_sprite.x = game_board.width;
     board_sprite.y = game_board.height;
   }

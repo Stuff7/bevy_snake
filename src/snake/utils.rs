@@ -1,10 +1,11 @@
 use crate::{
-  board::{resources::GameBoard, CELL_SIZE},
+  board::{resources::GameBoard, utils::get_board_position, CELL_SIZE},
   collections::ExternalOps,
 };
-use bevy::prelude::{Entity, Vec3};
+use bevy::prelude::{Commands, Entity, Transform, Vec3, Visibility};
+use rand::random;
 
-use super::components::Direction;
+use super::components::{Direction, Living, Nourished};
 
 pub const SNAKE_NAMES: [&str; 50] = [
   "Slytherin",
@@ -118,4 +119,18 @@ pub fn sort_direction_by_nearest(
       direction_v.opposite(),
     ]
   }
+}
+
+pub fn revive_snake(
+  commands: &mut Commands,
+  (snake, visibility, transform): (Entity, &mut Visibility, &mut Transform),
+  game_board: &GameBoard,
+) {
+  transform.translation = get_board_position(
+    (random::<f32>() - 0.5) * game_board.width,
+    (random::<f32>() - 0.5) * game_board.height,
+  );
+  *visibility = Visibility::Visible;
+  commands.entity(snake).insert(Living);
+  commands.entity(snake).insert(Nourished(4));
 }

@@ -1,6 +1,6 @@
 use crate::{
   board::{utils::create_cell_bundle, CELL_SIZE},
-  scoreboard::components::{Name, Score},
+  scoreboard::{components::ScoreEntity, utils::spawn_score},
 };
 use bevy::{
   prelude::{
@@ -40,8 +40,7 @@ impl Default for SnakeConfig {
 #[derive(Bundle)]
 pub struct SnakeBundle {
   snake: Snake,
-  name: Name,
-  score: Score,
+  score: ScoreEntity,
   direction: Direction,
   body: SnakeBody,
   living: Living,
@@ -52,10 +51,10 @@ pub struct SnakeBundle {
 
 impl SnakeBundle {
   pub fn new(commands: &mut Commands, board: Entity, config: SnakeConfig) -> Self {
+    let score = spawn_score(commands, config.tail_length, config.name, config.color);
     Self {
       snake: Snake,
-      name: Name(config.name),
-      score: Score(config.tail_length),
+      score: ScoreEntity(score),
       direction: config.direction,
       body: SnakeBody::new(
         commands,

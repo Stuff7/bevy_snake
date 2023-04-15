@@ -8,79 +8,50 @@ use crate::{
   snake::{
     components::{Living, Seeker, SnakeBundle, SnakeConfig},
     events::Serpentine,
+    utils::revive_snake,
   },
 };
 use bevy::{
   ecs::query::{ReadOnlyWorldQuery, WorldQuery},
   prelude::{
-    BuildChildren, Color, Commands, Component, Entity, EventReader, Or, Query, Res, Transform,
-    Vec3, With,
+    BuildChildren, Changed, Color, Commands, Component, Entity, EventReader, Or, Query, Res,
+    Transform, Vec3, Visibility, With, Without,
   },
 };
 use rand::random;
 
-pub(super) fn spawn_eater(
+pub(super) fn spawn_enemies(
   mut commands: Commands,
-  q_enemy: Query<(), (With<Enemy>, With<Eater>)>,
   q_board: Query<Entity, With<Board>>,
   game_board: Res<GameBoard>,
 ) {
-  spawn_single_seeker(
-    Eater,
-    EATER_COLOR,
-    &mut commands,
-    &q_enemy,
-    &q_board,
-    &game_board,
-  );
-}
-
-pub(super) fn spawn_killer(
-  mut commands: Commands,
-  q_enemy: Query<(), (With<Enemy>, With<Killer>)>,
-  q_board: Query<Entity, With<Board>>,
-  game_board: Res<GameBoard>,
-) {
-  spawn_single_seeker(
-    Killer,
-    KILLER_COLOR,
-    &mut commands,
-    &q_enemy,
-    &q_board,
-    &game_board,
-  );
-}
-
-pub(super) fn spawn_speedster(
-  mut commands: Commands,
-  q_enemy: Query<(), (With<Enemy>, With<Speedster>)>,
-  q_board: Query<Entity, With<Board>>,
-  game_board: Res<GameBoard>,
-) {
+  spawn_single_seeker(Eater, EATER_COLOR, &mut commands, &q_board, &game_board);
+  spawn_single_seeker(Killer, KILLER_COLOR, &mut commands, &q_board, &game_board);
   spawn_single_seeker(
     Speedster,
     SPEEDSTER_COLOR,
     &mut commands,
-    &q_enemy,
     &q_board,
     &game_board,
   );
+  spawn_single_seeker(Glutton, GLUTTON_COLOR, &mut commands, &q_board, &game_board);
 }
 
-pub(super) fn spawn_glutton(
+pub(super) fn respawn(
   mut commands: Commands,
-  q_enemy: Query<(), (With<Enemy>, With<Glutton>)>,
-  q_board: Query<Entity, With<Board>>,
+  mut q_dead_enemy: Query<
+    (Entity, &mut Visibility, &mut Transform),
+    (Without<Living>, Changed<Visibility>, With<Enemy>),
+  >,
   game_board: Res<GameBoard>,
 ) {
-  spawn_single_seeker(
-    Glutton,
-    GLUTTON_COLOR,
-    &mut commands,
-    &q_enemy,
-    &q_board,
-    &game_board,
-  );
+  for (enemy, mut visibility, mut transform) in &mut q_dead_enemy {
+    revive_snake(
+      &mut commands,
+      (enemy, &mut visibility, &mut transform),
+      &game_board,
+    );
+  }
 }
 
 pub(super) fn seek_food(
@@ -162,29 +133,26 @@ fn spawn_single_seeker<C: Component>(
   id_component: C,
   color: Color,
   commands: &mut Commands,
-  q_enemy: &Query<(), (With<Enemy>, With<C>)>,
   q_board: &Query<Entity, With<Board>>,
   game_board: &GameBoard,
 ) {
-  if q_enemy.get_single().is_err() {
-    let Ok(board) = q_board.get_single() else {return};
-    let enemy = (
-      Enemy,
-      id_component,
-      Seeker::default(),
-      SnakeBundle::new(
-        commands,
-        board,
-        SnakeConfig {
-          x: (random::<f32>() - 0.5) * game_board.width,
-          y: (random::<f32>() - 0.5) * game_board.height,
-          color,
-          tail_length: INITIAL_ENEMY_LENGTH,
-          ..Default::default()
-        },
-      ),
-    );
-    let enemy = commands.spawn(enemy).id();
-    commands.entity(board).add_child(enemy);
-  }
+  let Ok(board) = q_board.get_single() else {return};
+  let enemy = (
+    Enemy,
+    id_component,
+    Seeker::default(),
+    SnakeBundle::new(
+      commands,
+      board,
+      SnakeConfig {
+        x: (random::<f32>() - 0.5) * game_board.width,
+        y: (random::<f32>() - 0.5) * game_board.height,
+        color,
+        tail_length: INITIAL_ENEMY_LENGTH,
+        ..Default::default()
+      },
+    ),
+  );
+  let enemy = commands.spawn(enemy).id();
+  commands.entity(board).add_child(enemy);
 }

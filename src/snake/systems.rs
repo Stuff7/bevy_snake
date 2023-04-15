@@ -1,17 +1,17 @@
 use super::{
   components::{Direction, Living, Nourished, Seeker, Snake, SnakeBody, SnakeSegment, Speed},
-  events::{BodySizeChange, Serpentine, SnakeDeath, SnakeSizeChange},
+  events::{BodySizeChange, Serpentine, SnakeSizeChange},
   utils::{snake_crashed, sort_direction_by_nearest},
 };
 use crate::{
   board::{components::Board, resources::GameBoard, CELL_SIZE, HALF_CELL_SIZE},
   collections::ExternalOps,
   food::{components::Food, events::FoodEaten},
-  scoreboard::components::{Name, Score},
+  scoreboard::components::{Name, Score, ScoreEntity},
 };
 use bevy::prelude::{
   BuildChildren, Commands, Entity, EventReader, EventWriter, Query, Res, Sprite, Time, Transform,
-  Vec3, With, Without,
+  Vec3, Visibility, With, Without,
 };
 
 pub(super) fn serpentine(
@@ -109,7 +109,13 @@ pub(super) fn grow(
   mut commands: Commands,
   mut serpentine_reader: EventReader<Serpentine>,
   mut q_snake: Query<
-    (&Sprite, &Direction, &mut SnakeBody, &mut Nourished),
+    (
+      &Transform,
+      &Sprite,
+      &Direction,
+      &mut SnakeBody,
+      &mut Nourished,
+    ),
     (With<Snake>, With<Living>),
   >,
   q_snake_segment: Query<&Transform, With<SnakeSegment>>,
@@ -117,7 +123,7 @@ pub(super) fn grow(
 ) {
   for snake in &mut serpentine_reader {
     let Ok(
-      (sprite, direction, mut body, mut nourished_lvl)
+      (head, sprite, direction, mut body, mut nourished_lvl)
     ) = q_snake.get_mut(snake.0) else {continue};
 
     if nourished_lvl.0 == 0 {
@@ -126,7 +132,9 @@ pub(super) fn grow(
     }
 
     let Ok(board) = q_board.get_single() else {continue};
-    let Ok(tail) = q_snake_segment.get(body.tail().unwrap_or(snake.0)) else {continue};
+    let tail = q_snake_segment
+      .get(body.tail().unwrap_or(snake.0))
+      .unwrap_or(head);
     let tail = tail.translation;
     let direction = direction.opposite();
     let (x, y) = (tail.x, tail.y).add(direction.xy(CELL_SIZE, CELL_SIZE));
@@ -169,31 +177,37 @@ pub(super) fn die(
   }
 }
 
-pub(super) fn update_score(
-  mut serpentine_reader: EventReader<Serpentine>,
-  mut q_snake: Query<(&SnakeBody, &mut Score), (With<Snake>, With<Living>)>,
+pub(super) fn disappear(
+  mut commands: Commands,
+  mut q_snakes: Query<
+    (&ScoreEntity, &mut Visibility, &mut SnakeBody),
+    (With<Snake>, Without<Living>),
+  >,
+  q_scores: Query<&Name, With<Score>>,
+  q_board: Query<Entity, With<Board>>,
 ) {
-  for serpentine in &mut serpentine_reader {
-    let Ok((body, mut score)) = q_snake.get_mut(serpentine.0) else {continue};
-    score.0 = body.len();
+  for (score, mut visibility, mut body) in &mut q_snakes {
+    let Ok(board) = q_board.get_single() else {return};
+    let Ok(name) = q_scores.get(score.0) else {return};
+    if let Some(tail) = body.pop_tail() {
+      commands.entity(board).remove_children(&[tail]);
+      commands.entity(tail).despawn();
+    } else if *visibility != Visibility::Hidden {
+      println!("☠️ {}", name.0);
+      *visibility = Visibility::Hidden;
+    }
   }
 }
 
-pub(super) fn despawn(
-  mut commands: Commands,
-  mut snake_death_writer: EventWriter<SnakeDeath>,
-  mut q_snake: Query<(Entity, &Name, &mut SnakeBody), (With<Snake>, Without<Living>)>,
-  q_board: Query<Entity, With<Board>>,
+pub(super) fn update_score(
+  mut serpentine_reader: EventReader<Serpentine>,
+  mut q_snakes: Query<(&SnakeBody, &ScoreEntity), With<Snake>>,
+  mut q_scores: Query<&mut Score>,
 ) {
-  for (snake, name, mut body) in &mut q_snake {
-    let Ok(board) = q_board.get_single() else {return};
-    let tail = body.pop_tail().unwrap_or_else(|| {
-      println!("☠️ {}", name.0);
-      snake_death_writer.send(SnakeDeath);
-      snake
-    });
-    commands.entity(board).remove_children(&[tail]);
-    commands.entity(tail).despawn();
+  for serpentine in &mut serpentine_reader {
+    let Ok((body, score)) = q_snakes.get_mut(serpentine.0) else {continue};
+    let Ok(mut score) = q_scores.get_mut(score.0) else {continue};
+    score.0 = body.len();
   }
 }
 

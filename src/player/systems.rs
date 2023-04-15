@@ -4,48 +4,51 @@ use super::{
   INITIAL_PLAYER_LENGTH, PLAYER_COLOR,
 };
 use crate::{
-  board::components::Board,
+  board::{components::Board, resources::GameBoard},
   snake::{
-    components::{Direction, SnakeBundle, SnakeConfig},
+    components::{Direction, Living, SnakeBundle, SnakeConfig},
     events::Serpentine,
+    utils::revive_snake,
   },
 };
 use bevy::prelude::{
-  BuildChildren, Commands, Entity, EventReader, EventWriter, Input, KeyCode, Query, Res, With,
+  BuildChildren, Commands, Entity, EventReader, Input, KeyCode, Query, Res, Transform, Visibility,
+  With, Without,
 };
 
-pub(super) fn startup(mut respawn_writer: EventWriter<RespawnPlayer>) {
-  respawn_writer.send(RespawnPlayer);
+pub(super) fn spawn(mut commands: Commands, q_board: Query<Entity, With<Board>>) {
+  let Ok(board) = q_board.get_single() else {return};
+  let player = (
+    Player,
+    DirectionQueue::default(),
+    SnakeBundle::new(
+      &mut commands,
+      board,
+      SnakeConfig {
+        name: "Player".to_string(),
+        color: PLAYER_COLOR,
+        tail_length: INITIAL_PLAYER_LENGTH,
+        ..Default::default()
+      },
+    ),
+  );
+  let player = commands.spawn(player).id();
+  commands.entity(board).add_child(player);
 }
 
-pub(super) fn spawn(
+pub(super) fn respawn(
   mut commands: Commands,
   mut respawn_reader: EventReader<RespawnPlayer>,
-  q_player: Query<(), With<Player>>,
-  q_board: Query<Entity, With<Board>>,
+  mut q_player: Query<(Entity, &mut Visibility, &mut Transform), (With<Player>, Without<Living>)>,
+  game_board: Res<GameBoard>,
 ) {
   for _ in respawn_reader.iter() {
-    if q_player.get_single().is_ok() {
-      return;
-    }
-
-    let Ok(board) = q_board.get_single() else {return};
-    let player = (
-      Player,
-      DirectionQueue::default(),
-      SnakeBundle::new(
-        &mut commands,
-        board,
-        SnakeConfig {
-          name: "Player".to_string(),
-          color: PLAYER_COLOR,
-          tail_length: INITIAL_PLAYER_LENGTH,
-          ..Default::default()
-        },
-      ),
+    let Ok((player, mut visibility, mut transform)) = q_player.get_single_mut() else {return};
+    revive_snake(
+      &mut commands,
+      (player, &mut visibility, &mut transform),
+      &game_board,
     );
-    let player = commands.spawn(player).id();
-    commands.entity(board).add_child(player);
   }
 }
 

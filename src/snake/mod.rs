@@ -20,14 +20,13 @@ impl Plugin for SnakePlugin {
     app
       .add_event::<events::SnakeSizeChange>()
       .add_event::<events::Serpentine>()
-      .add_event::<events::SnakeDeath>()
       .add_system(systems::serpentine.run_if(in_state(GameState::Playing)))
       .add_system(systems::resize)
       .add_system(systems::grow)
       .add_system(systems::eat)
       .add_system(systems::update_score)
       .add_system(systems::seek)
-      .add_system(systems::despawn.run_if(on_timer(
+      .add_system(systems::disappear.run_if(on_timer(
         MIN_SERPENTINE_DURATION + (MAX_SERPENTINE_DURATION - MIN_SERPENTINE_DURATION) / 2,
       )))
       .add_system(systems::die);
@@ -47,6 +46,4 @@ pub mod events {
 
   #[derive(Clone, Copy)]
   pub struct Serpentine(pub Entity, pub Vec3);
-
-  pub struct SnakeDeath;
 }

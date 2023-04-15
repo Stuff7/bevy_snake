@@ -29,9 +29,6 @@ pub(super) fn god_mode(
     let Ok(player) = q_player.get_single() else { return; };
     size_change_writer.send((player, Shrink));
   } else if keyboard_input.just_pressed(KeyCode::R) {
-    if q_player.get_single().is_ok() {
-      return;
-    }
     respawn_player_writer.send(RespawnPlayer);
   } else if keyboard_input.just_pressed(KeyCode::P) {
     next_state.set(if game_state.0 == GameState::Paused {
