@@ -10,8 +10,14 @@ use std::time::Duration;
 
 use crate::state::GameState;
 
-pub const MAX_SERPENTINE_DURATION: Duration = Duration::from_millis(120);
-pub const MIN_SERPENTINE_DURATION: Duration = Duration::from_millis(30);
+pub const MAX_SERPENTINE_DURATION_MS: u64 = 120;
+pub const MIN_SERPENTINE_DURATION_MS: u64 = 30;
+pub const SERPENTINE_DURATION_MS: u64 =
+  MIN_SERPENTINE_DURATION_MS + (MAX_SERPENTINE_DURATION_MS - MIN_SERPENTINE_DURATION_MS) / 2;
+
+pub const MAX_SERPENTINE_DURATION: Duration = Duration::from_millis(MAX_SERPENTINE_DURATION_MS);
+pub const SERPENTINE_DURATION: Duration = Duration::from_millis(SERPENTINE_DURATION_MS);
+pub const MIN_SERPENTINE_DURATION: Duration = Duration::from_millis(MIN_SERPENTINE_DURATION_MS);
 
 pub struct SnakePlugin;
 
@@ -26,9 +32,7 @@ impl Plugin for SnakePlugin {
       .add_system(systems::eat)
       .add_system(systems::update_score)
       .add_system(systems::seek)
-      .add_system(systems::disappear.run_if(on_timer(
-        MIN_SERPENTINE_DURATION + (MAX_SERPENTINE_DURATION - MIN_SERPENTINE_DURATION) / 2,
-      )))
+      .add_system(systems::disappear.run_if(on_timer(SERPENTINE_DURATION)))
       .add_system(systems::die);
   }
 }

@@ -5,7 +5,7 @@ use bevy::{
   ui::PositionType,
 };
 
-pub(super) const SCOREBOARD_BACKGROUND: Color = Color::rgb(15. / 255., 15. / 255., 15. / 255.);
+pub(super) const SCOREBOARD_BACKGROUND: Color = Color::rgb(16. / 255., 16. / 255., 16. / 255.);
 pub(super) const SCOREBOARD: Style = Style {
   flex_direction: FlexDirection::Column,
   align_items: AlignItems::Center,
@@ -15,7 +15,7 @@ pub(super) const SCOREBOARD: Style = Style {
   ..Style::DEFAULT
 };
 
-pub(super) const SCORE_BACKGROUND: Color = Color::BLACK;
+pub(super) const SCORE_BACKGROUND: Color = Color::rgb(24. / 255., 24. / 255., 24. / 255.);
 pub(super) const SCORE_HEIGHT: f32 = 40.;
 pub(super) const SCORE: Style = Style {
   position_type: PositionType::Absolute,
@@ -27,7 +27,7 @@ pub(super) const SCORE: Style = Style {
   },
   justify_content: JustifyContent::SpaceBetween,
   align_items: AlignItems::Center,
-  size: Size::new(Val::Percent(100.), Val::Auto),
+  size: Size::new(Val::Percent(90.), Val::Px(SCORE_HEIGHT)),
   padding: UiRect::new(Val::Px(8.), Val::Px(8.), Val::Px(4.), Val::Px(4.)),
   ..Style::DEFAULT
 };

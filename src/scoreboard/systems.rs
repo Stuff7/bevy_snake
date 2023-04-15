@@ -66,7 +66,7 @@ pub(super) fn sort_scores(
     scores.sort_by(|a, b| b.0.partial_cmp(a.0).unwrap());
 
     for (i, (_, ref mut place)) in scores.iter_mut().enumerate() {
-      place.0 = (i + 1) as f32 * styles::SCORE_HEIGHT;
+      place.0 = (i + 1) as f32 * (styles::SCORE_HEIGHT + 4.);
     }
   }
 }

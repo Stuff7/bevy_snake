@@ -6,7 +6,7 @@ use crate::{
   board::{components::Board, resources::GameBoard},
   food::components::Food,
   snake::{
-    components::{Living, Seeker, SnakeBundle, SnakeConfig},
+    components::{Living, Seeker, SnakeBundle, SnakeConfig, Speed},
     events::Serpentine,
     utils::revive_snake,
   },
@@ -40,15 +40,15 @@ pub(super) fn spawn_enemies(
 pub(super) fn respawn(
   mut commands: Commands,
   mut q_dead_enemy: Query<
-    (Entity, &mut Visibility, &mut Transform),
+    (Entity, &mut Visibility, &mut Transform, &mut Speed),
     (Without<Living>, Changed<Visibility>, With<Enemy>),
   >,
   game_board: Res<GameBoard>,
 ) {
-  for (enemy, mut visibility, mut transform) in &mut q_dead_enemy {
+  for (enemy, mut visibility, mut transform, mut speed) in &mut q_dead_enemy {
     revive_snake(
       &mut commands,
-      (enemy, &mut visibility, &mut transform),
+      (enemy, &mut visibility, &mut transform, &mut speed),
       &game_board,
     );
   }

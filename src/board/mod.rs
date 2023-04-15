@@ -4,7 +4,7 @@ pub mod utils;
 use bevy::prelude::{App, Color, IntoSystemConfig, Plugin, StartupSet, Vec2};
 
 pub const BOARD_COLOR: Color = Color::rgb(23. / 255., 23. / 255., 23. / 255.);
-pub const CELL_SIZE: f32 = 20.;
+pub const CELL_SIZE: f32 = 16.;
 pub const HALF_CELL_SIZE: f32 = CELL_SIZE / 2.;
 pub const BOARD_WIDTH_FACTOR: f32 = 0.7 / (CELL_SIZE * 2.);
 pub const BOARD_HEIGHT_FACTOR: f32 = 0.9 / (CELL_SIZE * 2.);
