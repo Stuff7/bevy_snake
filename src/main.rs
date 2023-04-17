@@ -27,6 +27,7 @@ fn main() {
     .add_state::<state::GameState>()
     .add_plugin(main_camera::MainCameraPlugin)
     .add_plugin(scoreboard::ScoreboardPlugin)
+    .add_plugin(color::ColorPlugin)
     .add_plugin(board::BoardPlugin)
     .add_plugin(player::PlayerPlugin)
     .add_plugin(enemy::EnemyPlugin)

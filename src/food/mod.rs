@@ -40,9 +40,9 @@ pub mod components {
   impl From<Food> for Color {
     fn from(food: Food) -> Self {
       match food {
-        Food::Regular => Color::rgb_u8(255, 191, 72),
-        Food::Swiftness => Color::rgb_u8(135, 212, 235),
-        Food::ExtraGrowth => Color::rgb_u8(143, 135, 235),
+        Food::Regular => Color::rgb(2., 2., 0.),
+        Food::Swiftness => Color::rgb(0., 2., 2.),
+        Food::ExtraGrowth => Color::rgb(2., 0.5, 2.),
       }
     }
   }

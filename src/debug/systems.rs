@@ -1,6 +1,5 @@
 use crate::{
   board::components::Board,
-  food::components::Food,
   player::{components::Player, events::RespawnPlayer},
   scoreboard::components::Name,
   snake::{
@@ -59,14 +58,12 @@ pub(super) fn print_debug_info(
   keyboard_input: Res<Input<KeyCode>>,
   q_entity: Query<Entity>,
   q_snake: Query<&Name, With<Snake>>,
-  q_food: Query<Entity, With<Food>>,
 ) {
   if keyboard_input.just_pressed(KeyCode::O) {
     let debug = [
       "=== === === DEBUG === === ===",
       &format!("Entity Count: {}", q_entity.iter().count()),
       &format!("Snakes: {:#?}", q_snake.iter().collect::<Vec<_>>()),
-      &format!("Food: {:#?}", q_food.get_single()),
     ]
     .join("\n");
     println!("{debug}");

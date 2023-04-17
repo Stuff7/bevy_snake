@@ -1,5 +1,6 @@
 use crate::{
   board::{utils::create_cell_bundle, CELL_SIZE},
+  color::components::{BaseColor, Brightness},
   scoreboard::{components::ScoreEntity, utils::spawn_score},
 };
 use bevy::{
@@ -40,6 +41,8 @@ impl Default for SnakeConfig {
 #[derive(Bundle)]
 pub struct SnakeBundle {
   snake: Snake,
+  color: BaseColor,
+  brightness: Brightness,
   score: ScoreEntity,
   direction: Direction,
   body: SnakeBody,
@@ -54,6 +57,8 @@ impl SnakeBundle {
     let score = spawn_score(commands, config.tail_length, config.name, config.color);
     Self {
       snake: Snake,
+      color: BaseColor(config.color),
+      brightness: Brightness::default(),
       score: ScoreEntity(score),
       direction: config.direction,
       body: SnakeBody::new(

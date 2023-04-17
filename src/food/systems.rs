@@ -8,6 +8,7 @@ use crate::{
     resources::GameBoard,
     utils::{create_cell_bundle, get_board_position},
   },
+  color::components::Brightness,
   snake::{
     components::{Living, Nourished, Snake, Speed},
     events::{BodySizeChange, SnakeSizeChange},
@@ -67,14 +68,17 @@ pub(super) fn apply_effects(
   mut body_size_change_writer: EventWriter<SnakeSizeChange>,
   mut food_eaten_reader: EventReader<FoodEaten>,
   mut q_effect: Query<&Food>,
-  mut q_snake: Query<(&mut Speed, Option<&mut Nourished>), (With<Snake>, With<Living>)>,
+  mut q_snake: Query<
+    (&mut Speed, Option<&mut Nourished>, &mut Brightness),
+    (With<Snake>, With<Living>),
+  >,
 ) {
   for FoodEaten { snake, food } in food_eaten_reader.iter() {
     let Ok(effect) = q_effect.get_mut(*food) else {continue};
     match *effect {
       Food::Regular => body_size_change_writer.send((*snake, BodySizeChange::Grow)),
       Food::ExtraGrowth => {
-        let Ok((mut speed, nourished)) = q_snake.get_mut(*snake) else {continue};
+        let Ok((mut speed, nourished, _)) = q_snake.get_mut(*snake) else {continue};
         let serpentine_duration = speed.duration();
         let nourishment = if serpentine_duration < MAX_SERPENTINE_DURATION {
           speed.set_duration(serpentine_duration + Duration::from_millis(10));
@@ -89,8 +93,11 @@ pub(super) fn apply_effects(
         }
       }
       Food::Swiftness => {
-        let Ok((mut speed, _)) = q_snake.get_mut(*snake) else {continue};
+        let Ok((mut speed, _, mut brightness)) = q_snake.get_mut(*snake) else {continue};
         let serpentine_duration = speed.duration();
+        if brightness.0 < 1.5 {
+          brightness.0 += 0.5;
+        }
         if serpentine_duration > MIN_SERPENTINE_DURATION {
           speed.set_duration(serpentine_duration - Duration::from_millis(10));
         } else {

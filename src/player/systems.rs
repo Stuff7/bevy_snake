@@ -5,6 +5,7 @@ use super::{
 };
 use crate::{
   board::{components::Board, resources::GameBoard},
+  color::components::Brightness,
   snake::{
     components::{Direction, Living, SnakeBundle, SnakeConfig, Speed},
     events::Serpentine,
@@ -40,16 +41,28 @@ pub(super) fn respawn(
   mut commands: Commands,
   mut respawn_reader: EventReader<RespawnPlayer>,
   mut q_player: Query<
-    (Entity, &mut Visibility, &mut Transform, &mut Speed),
+    (
+      Entity,
+      &mut Visibility,
+      &mut Transform,
+      &mut Speed,
+      &mut Brightness,
+    ),
     (With<Player>, Without<Living>),
   >,
   game_board: Res<GameBoard>,
 ) {
   for _ in respawn_reader.iter() {
-    let Ok((player, mut visibility, mut transform, mut speed)) = q_player.get_single_mut() else {return};
+    let Ok((player, mut visibility, mut transform, mut speed, mut brightness)) = q_player.get_single_mut() else {return};
     revive_snake(
       &mut commands,
-      (player, &mut visibility, &mut transform, &mut speed),
+      (
+        player,
+        &mut visibility,
+        &mut transform,
+        &mut speed,
+        &mut brightness,
+      ),
       &game_board,
     );
   }

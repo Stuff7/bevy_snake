@@ -1,6 +1,7 @@
 use crate::{
   board::{resources::GameBoard, utils::get_board_position, CELL_SIZE},
   collections::ExternalOps,
+  color::components::Brightness,
 };
 use bevy::prelude::{Commands, Entity, Transform, Vec3, Visibility};
 use rand::random;
@@ -126,7 +127,13 @@ pub fn sort_direction_by_nearest(
 
 pub fn revive_snake(
   commands: &mut Commands,
-  (snake, visibility, transform, speed): (Entity, &mut Visibility, &mut Transform, &mut Speed),
+  (snake, visibility, transform, speed, brightness): (
+    Entity,
+    &mut Visibility,
+    &mut Transform,
+    &mut Speed,
+    &mut Brightness,
+  ),
   game_board: &GameBoard,
 ) {
   transform.translation = get_board_position(
@@ -134,6 +141,7 @@ pub fn revive_snake(
     (random::<f32>() - 0.5) * game_board.height,
   );
   *visibility = Visibility::Visible;
+  brightness.0 = 0.;
   speed.set_duration(SERPENTINE_DURATION);
   commands.entity(snake).insert(Living).insert(Nourished(4));
 }

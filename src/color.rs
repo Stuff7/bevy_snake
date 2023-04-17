@@ -1,20 +1,50 @@
-use bevy::prelude::Color;
-use rand::{thread_rng, Rng};
+use bevy::prelude::{App, Plugin};
 
-pub fn generate_bright_color() -> Color {
-  let mut rng = thread_rng();
-  let min_value = 0.3;
-  let threshold = 0.5;
+pub struct ColorPlugin;
 
-  let r: f32 = rng.gen_range(0.0..1.0);
-  let g: f32 = rng.gen_range(0.0..1.0);
-  let b: f32 = rng.gen_range(0.0..1.0);
+impl Plugin for ColorPlugin {
+  fn build(&self, app: &mut App) {
+    app.add_system(systems::update_brightness);
+  }
+}
 
-  let brightness = 0.299 * r + 0.587 * g + 0.114 * b;
+pub mod components {
+  use bevy::prelude::{Color, Component};
 
-  if brightness < threshold {
-    Color::rgb(r.max(min_value), g.max(min_value), b.max(min_value))
-  } else {
-    Color::rgb(r, g, b)
+  #[derive(Debug, Component, Default)]
+  pub struct Brightness(pub f32);
+
+  #[derive(Debug, Component, Default)]
+  pub struct BaseColor(pub Color);
+}
+
+pub mod systems {
+  use bevy::prelude::{Changed, Or, Query, Sprite};
+
+  use super::{
+    components::{BaseColor, Brightness},
+    utils::increase_brightness,
+  };
+
+  pub(super) fn update_brightness(
+    mut q_sprite: Query<
+      (&mut Sprite, &BaseColor, &Brightness),
+      Or<(Changed<Brightness>, Changed<BaseColor>)>,
+    >,
+  ) {
+    for (mut sprite, color, brightness) in &mut q_sprite {
+      sprite.color = increase_brightness(&color.0, brightness.0);
+    }
+  }
+}
+
+pub mod utils {
+  use bevy::prelude::Color;
+
+  pub fn increase_brightness(color: &Color, amount: f32) -> Color {
+    let brightness = 0.299 * color.r() + 0.587 * color.g() + 0.114 * color.b();
+    let new_brightness = brightness + amount;
+    let ratio = new_brightness / brightness;
+    Color::rgb(color.r() * ratio, color.g() * ratio, color.b() * ratio)
   }
 }

@@ -23,14 +23,15 @@ pub(super) fn serpentine(
       &Direction,
       &mut SnakeBody,
       &mut Speed,
+      &Sprite,
     ),
     (With<Snake>, With<Living>),
   >,
-  mut q_snake_segment: Query<&mut Transform, (With<SnakeSegment>, Without<Snake>)>,
+  mut q_snake_segment: Query<(&mut Transform, &mut Sprite), (With<SnakeSegment>, Without<Snake>)>,
   game_board: Res<GameBoard>,
   time: Res<Time>,
 ) {
-  for (snake, mut snake_head, direction, mut body, mut speed) in &mut q_snake {
+  for (snake, mut snake_head, direction, mut body, mut speed, sprite) in &mut q_snake {
     speed.tick(time.delta());
     if !speed.finished() {
       continue;
@@ -42,8 +43,9 @@ pub(super) fn serpentine(
       } else {
         head_entity
       };
-      let Ok(mut old_head) = q_snake_segment.get_mut(tail) else { continue; };
-      old_head.translation = snake_head.translation;
+      let Ok((mut old_head_transform, mut old_head_sprite)) = q_snake_segment.get_mut(tail) else { continue; };
+      old_head_transform.translation = snake_head.translation;
+      old_head_sprite.color = sprite.color;
     }
 
     let (x, y) = direction.xy(CELL_SIZE, CELL_SIZE);
