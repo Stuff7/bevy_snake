@@ -15,37 +15,38 @@ pub const MIN_SERPENTINE_DURATION_MS: u64 = 30;
 pub const SERPENTINE_DURATION_MS: u64 =
   MIN_SERPENTINE_DURATION_MS + (MAX_SERPENTINE_DURATION_MS - MIN_SERPENTINE_DURATION_MS) / 2;
 
-pub const MAX_SERPENTINE_DURATION: Duration = Duration::from_millis(MAX_SERPENTINE_DURATION_MS);
 pub const SERPENTINE_DURATION: Duration = Duration::from_millis(SERPENTINE_DURATION_MS);
-pub const MIN_SERPENTINE_DURATION: Duration = Duration::from_millis(MIN_SERPENTINE_DURATION_MS);
 
 pub struct SnakePlugin;
 
 impl Plugin for SnakePlugin {
   fn build(&self, app: &mut App) {
     app
-      .add_event::<events::SnakeSizeChange>()
+      .add_event::<events::SnakeResize>()
       .add_event::<events::Serpentine>()
       .add_system(systems::serpentine.run_if(in_state(GameState::Playing)))
       .add_system(systems::resize)
+      .add_system(systems::recolor)
       .add_system(systems::grow)
+      .add_system(systems::shrink)
       .add_system(systems::eat)
       .add_system(systems::update_score)
       .add_system(systems::seek)
       .add_system(systems::disappear.run_if(on_timer(SERPENTINE_DURATION)))
-      .add_system(systems::die);
+      .add_system(systems::die)
+      .add_system(systems::revive);
   }
 }
 
 pub mod events {
   use bevy::prelude::{Entity, Vec3};
 
-  pub type SnakeSizeChange = (Entity, BodySizeChange);
+  pub type SnakeResize = (Entity, BodyResize);
 
   #[derive(Debug)]
-  pub enum BodySizeChange {
-    Grow,
-    Shrink,
+  pub enum BodyResize {
+    Grow(u32),
+    Shrink(u32),
   }
 
   #[derive(Clone, Copy)]

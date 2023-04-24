@@ -1,18 +1,25 @@
 use super::{
-  components::{Direction, Living, Nourished, Seeker, Snake, SnakeBody, SnakeSegment, Speed},
-  events::{BodySizeChange, Serpentine, SnakeSizeChange},
+  components::{
+    Direction, Hunger, Living, Nourishment, Revive, Satiety, Seeker, Snake, SnakeBody, SnakeSegment,
+  },
+  events::{BodyResize, Serpentine, SnakeResize},
   utils::{snake_crashed, sort_direction_by_nearest},
 };
 use crate::{
-  board::{components::Board, resources::GameBoard, CELL_SIZE, HALF_CELL_SIZE},
+  attributes::components::MoveCooldown,
+  board::{
+    components::Board, resources::GameBoard, utils::get_board_position, CELL_SIZE, HALF_CELL_SIZE,
+  },
   collections::ExternalOps,
+  effects::components::Swiftness,
   food::{components::Food, events::FoodEaten},
   scoreboard::components::{Name, Score, ScoreEntity},
 };
 use bevy::prelude::{
-  BuildChildren, Commands, Entity, EventReader, EventWriter, Query, Res, Sprite, Time, Transform,
-  Vec3, Visibility, With, Without,
+  Added, BuildChildren, Changed, Commands, Entity, EventReader, EventWriter, Query, Res, Sprite,
+  Time, Transform, Vec3, Visibility, With, Without,
 };
+use rand::random;
 
 pub(super) fn serpentine(
   mut serpentine_writer: EventWriter<Serpentine>,
@@ -22,18 +29,16 @@ pub(super) fn serpentine(
       &mut Transform,
       &Direction,
       &mut SnakeBody,
-      &mut Speed,
-      &Sprite,
+      &mut MoveCooldown,
     ),
     (With<Snake>, With<Living>),
   >,
-  mut q_snake_segment: Query<(&mut Transform, &mut Sprite), (With<SnakeSegment>, Without<Snake>)>,
+  mut q_snake_segment: Query<&mut Transform, (With<SnakeSegment>, Without<Snake>)>,
   game_board: Res<GameBoard>,
   time: Res<Time>,
 ) {
-  for (snake, mut snake_head, direction, mut body, mut speed, sprite) in &mut q_snake {
-    speed.tick(time.delta());
-    if !speed.finished() {
+  for (snake, mut snake_head, direction, mut body, mut move_cooldown) in &mut q_snake {
+    if !move_cooldown.finished(time.delta()) {
       continue;
     }
     if let Some(head_entity) = body.head() {
@@ -43,9 +48,8 @@ pub(super) fn serpentine(
       } else {
         head_entity
       };
-      let Ok((mut old_head_transform, mut old_head_sprite)) = q_snake_segment.get_mut(tail) else { continue; };
+      let Ok(mut old_head_transform) = q_snake_segment.get_mut(tail) else { continue; };
       old_head_transform.translation = snake_head.translation;
-      old_head_sprite.color = sprite.color;
     }
 
     let (x, y) = direction.xy(CELL_SIZE, CELL_SIZE);
@@ -69,39 +73,47 @@ pub(super) fn serpentine(
   }
 }
 
+pub(super) fn recolor(
+  mut q_snake: Query<(&Sprite, &SnakeBody), (With<Snake>, Changed<Sprite>)>,
+  mut q_snake_segment: Query<&mut Sprite, (With<SnakeSegment>, Without<Snake>)>,
+) {
+  for (head, body) in &mut q_snake {
+    for segment in body.iter() {
+      let Ok(mut segment) = q_snake_segment.get_mut(*segment) else {continue};
+      segment.color = head.color;
+    }
+  }
+}
+
 pub(super) fn resize(
   mut commands: Commands,
-  mut size_change_reader: EventReader<SnakeSizeChange>,
+  mut resize_reader: EventReader<SnakeResize>,
   mut q_snake: Query<
-    (&mut SnakeBody, &Transform, &Direction, &Sprite),
-    (With<Snake>, With<Living>),
+    (
+      Option<&mut Nourishment>,
+      Option<&mut Hunger>,
+      Option<&Satiety>,
+    ),
+    (With<Living>, With<Snake>),
   >,
-  q_snake_segment: Query<&Transform, With<SnakeSegment>>,
-  q_board: Query<Entity, With<Board>>,
 ) {
-  use BodySizeChange::*;
-  for (snake, size_change) in &mut size_change_reader {
-    let Ok(board) = q_board.get_single() else {continue};
-    let Ok((mut body, head, direction, sprite)) = q_snake.get_mut(*snake) else {
-      continue;
-    };
-    match size_change {
-      Grow => {
-        let tail = if let Some(tail) = body.tail() {
-          let Ok(tail) = q_snake_segment.get(tail) else {continue};
-          tail
+  for (snake, resize) in &mut resize_reader {
+    let Ok((mut nourishment, mut hunger, satiety)) = q_snake.get_mut(*snake) else {continue};
+    match *resize {
+      BodyResize::Grow(n) => {
+        let satiety = satiety.map(|s| s.0).unwrap_or(1);
+        if let Some(ref mut nourishment) = nourishment {
+          nourishment.0 += n * satiety;
         } else {
-          head
+          commands.entity(*snake).insert(Nourishment(n * satiety));
         }
-        .translation;
-        let direction = direction.opposite();
-        let (x, y) = (tail.x, tail.y).add(direction.xy(CELL_SIZE, CELL_SIZE));
-        let tail = SnakeSegment::spawn(&mut commands, board, sprite.color, x, y);
-        body.push_tail(tail);
       }
-      Shrink => {
-        let Some(tail) = body.pop_tail() else { return; };
-        commands.entity(tail).despawn();
+      BodyResize::Shrink(n) => {
+        if let Some(ref mut hunger) = hunger {
+          hunger.0 += n;
+        } else {
+          commands.entity(*snake).insert(Hunger(n));
+        }
       }
     }
   }
@@ -116,7 +128,7 @@ pub(super) fn grow(
       &Sprite,
       &Direction,
       &mut SnakeBody,
-      &mut Nourished,
+      &mut Nourishment,
     ),
     (With<Snake>, With<Living>),
   >,
@@ -125,11 +137,11 @@ pub(super) fn grow(
 ) {
   for snake in &mut serpentine_reader {
     let Ok(
-      (head, sprite, direction, mut body, mut nourished_lvl)
+      (head, sprite, direction, mut body, mut nourishment)
     ) = q_snake.get_mut(snake.0) else {continue};
 
-    if nourished_lvl.0 == 0 {
-      commands.entity(snake.0).remove::<Nourished>();
+    if nourishment.0 == 0 {
+      commands.entity(snake.0).remove::<Nourishment>();
       return;
     }
 
@@ -142,7 +154,33 @@ pub(super) fn grow(
     let (x, y) = (tail.x, tail.y).add(direction.xy(CELL_SIZE, CELL_SIZE));
     let tail = SnakeSegment::spawn(&mut commands, board, sprite.color, x, y);
     body.push_tail(tail);
-    nourished_lvl.0 -= 1;
+    nourishment.0 -= 1;
+  }
+}
+
+pub(super) fn shrink(
+  mut commands: Commands,
+  mut serpentine_reader: EventReader<Serpentine>,
+  mut q_snake: Query<(&mut SnakeBody, &mut Hunger), (With<Snake>, With<Living>)>,
+) {
+  for snake in &mut serpentine_reader {
+    let Ok(
+      (mut body, mut hunger)
+    ) = q_snake.get_mut(snake.0) else {continue};
+    let mut snake = commands.entity(snake.0);
+
+    if hunger.0 == 0 {
+      snake.remove::<Hunger>();
+      continue;
+    }
+
+    let Some(tail) = body.pop_tail() else {
+      snake.remove::<Hunger>().remove::<Living>();
+      continue;
+    };
+
+    commands.entity(tail).despawn();
+    hunger.0 -= 1;
   }
 }
 
@@ -176,6 +214,26 @@ pub(super) fn die(
       commands.entity(snake_entity).remove::<Living>();
       return;
     }
+  }
+}
+
+pub(super) fn revive(
+  mut commands: Commands,
+  mut q_snake: Query<(Entity, &mut Visibility, &mut Transform), (Added<Revive>, With<Snake>)>,
+  game_board: Res<GameBoard>,
+) {
+  for (snake, mut visibility, mut transform) in &mut q_snake {
+    transform.translation = get_board_position(
+      (random::<f32>() - 0.5) * game_board.width,
+      (random::<f32>() - 0.5) * game_board.height,
+    );
+    *visibility = Visibility::Visible;
+    commands
+      .entity(snake)
+      .remove::<Revive>()
+      .insert(Living)
+      .insert(Swiftness(0.))
+      .insert(Nourishment(4));
   }
 }
 

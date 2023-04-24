@@ -4,12 +4,10 @@ use super::{
 };
 use crate::{
   board::{components::Board, resources::GameBoard},
-  color::components::Brightness,
   food::components::Food,
   snake::{
-    components::{Living, Seeker, SnakeBundle, SnakeConfig, Speed},
+    components::{Living, Revive, Seeker, SnakeBundle, SnakeConfig},
     events::Serpentine,
-    utils::revive_snake,
   },
 };
 use bevy::{
@@ -40,30 +38,10 @@ pub(super) fn spawn_enemies(
 
 pub(super) fn respawn(
   mut commands: Commands,
-  mut q_dead_enemy: Query<
-    (
-      Entity,
-      &mut Visibility,
-      &mut Transform,
-      &mut Speed,
-      &mut Brightness,
-    ),
-    (Without<Living>, Changed<Visibility>, With<Enemy>),
-  >,
-  game_board: Res<GameBoard>,
+  mut q_dead_enemy: Query<Entity, (Without<Living>, Changed<Visibility>, With<Enemy>)>,
 ) {
-  for (enemy, mut visibility, mut transform, mut speed, mut brightness) in &mut q_dead_enemy {
-    revive_snake(
-      &mut commands,
-      (
-        enemy,
-        &mut visibility,
-        &mut transform,
-        &mut speed,
-        &mut brightness,
-      ),
-      &game_board,
-    );
+  for enemy in &mut q_dead_enemy {
+    commands.entity(enemy).insert(Revive);
   }
 }
 
@@ -91,7 +69,7 @@ pub(super) fn seek_snake(
       &q_target,
       |(entity, target, food)| {
         ((food.is_none() && seeker != entity)
-          || food.map(|f| *f == Food::Swiftness).unwrap_or_default())
+          || food.map(|f| *f == Food::Energetic).unwrap_or_default())
         .then_some((target.translation.distance(head), target.translation))
       },
     );
@@ -105,7 +83,7 @@ pub(super) fn seek_speed(
 ) {
   for Serpentine(seeker, head) in serpentine_reader.iter().copied() {
     seek_closest(seeker, &mut q_seeker, &q_target, |(food, target)| {
-      (*food == Food::Swiftness).then_some((target.translation.distance(head), target.translation))
+      (*food == Food::Energetic).then_some((target.translation.distance(head), target.translation))
     });
   }
 }
@@ -117,8 +95,7 @@ pub(super) fn seek_nourishment(
 ) {
   for Serpentine(seeker, head) in serpentine_reader.iter().copied() {
     seek_closest(seeker, &mut q_seeker, &q_target, |(food, target)| {
-      (*food == Food::ExtraGrowth)
-        .then_some((target.translation.distance(head), target.translation))
+      (*food == Food::Beefy).then_some((target.translation.distance(head), target.translation))
     });
   }
 }

@@ -3,9 +3,9 @@ mod systems;
 use bevy::prelude::{App, Color, Plugin};
 
 pub(super) const INITIAL_ENEMY_LENGTH: usize = 4;
-pub(super) const EATER_COLOR: Color = Color::rgb(1., 1., 1.);
+pub(super) const EATER_COLOR: Color = Color::rgb(90. / 255., 162. / 255., 250. / 255.);
 pub(super) const KILLER_COLOR: Color = Color::rgb(202. / 255., 98. / 255., 157. / 255.);
-pub(super) const SPEEDSTER_COLOR: Color = Color::rgb(99. / 255., 250. / 255., 250. / 255.);
+pub(super) const SPEEDSTER_COLOR: Color = Color::rgb(254. / 255., 227. / 255., 0. / 255.);
 pub(super) const GLUTTON_COLOR: Color = Color::rgb(254. / 255., 165. / 255., 1. / 255.);
 
 pub struct EnemyPlugin;

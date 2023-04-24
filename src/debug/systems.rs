@@ -4,7 +4,7 @@ use crate::{
   scoreboard::components::Name,
   snake::{
     components::Snake,
-    events::{BodySizeChange, SnakeSizeChange},
+    events::{BodyResize, SnakeResize},
   },
   state::GameState,
 };
@@ -14,19 +14,19 @@ use bevy::prelude::{
 
 pub(super) fn god_mode(
   mut respawn_player_writer: EventWriter<RespawnPlayer>,
-  mut size_change_writer: EventWriter<SnakeSizeChange>,
+  mut size_change_writer: EventWriter<SnakeResize>,
   q_player: Query<Entity, With<Player>>,
   keyboard_input: Res<Input<KeyCode>>,
   game_state: Res<State<GameState>>,
   mut next_state: ResMut<NextState<GameState>>,
 ) {
-  use BodySizeChange::*;
+  use BodyResize::*;
   if keyboard_input.just_pressed(KeyCode::E) {
     let Ok(player) = q_player.get_single() else { return; };
-    size_change_writer.send((player, Grow));
+    size_change_writer.send((player, Grow(1)));
   } else if keyboard_input.just_pressed(KeyCode::Q) {
     let Ok(player) = q_player.get_single() else { return; };
-    size_change_writer.send((player, Shrink));
+    size_change_writer.send((player, Shrink(1)));
   } else if keyboard_input.just_pressed(KeyCode::R) {
     respawn_player_writer.send(RespawnPlayer);
   } else if keyboard_input.just_pressed(KeyCode::P) {

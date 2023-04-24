@@ -1,17 +1,21 @@
+mod attributes;
 mod board;
-mod color;
 mod debug;
+mod effects;
 mod enemy;
 mod food;
 mod main_camera;
 mod player;
 mod scoreboard;
 mod snake;
+mod tetris;
 
 use bevy::{
   prelude::{App, DefaultPlugins, PluginGroup, Window, WindowPlugin},
   window::PresentMode,
 };
+
+pub const MAX_MOVE_COOLDOWN: f32 = 200.;
 
 fn main() {
   App::new()
@@ -27,7 +31,8 @@ fn main() {
     .add_state::<state::GameState>()
     .add_plugin(main_camera::MainCameraPlugin)
     .add_plugin(scoreboard::ScoreboardPlugin)
-    .add_plugin(color::ColorPlugin)
+    .add_plugin(effects::EffectPlugin)
+    .add_plugin(tetris::TetrisPlugin)
     .add_plugin(board::BoardPlugin)
     .add_plugin(player::PlayerPlugin)
     .add_plugin(enemy::EnemyPlugin)

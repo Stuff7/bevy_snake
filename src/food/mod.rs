@@ -1,6 +1,11 @@
 mod systems;
 
-use bevy::prelude::{App, Plugin};
+use bevy::prelude::{App, Color, Plugin};
+
+pub const COLOR_REGULAR: Color = Color::rgb(1.4, 0.8, 2.);
+pub const COLOR_BEEFY: Color = Color::rgb(2., 0.5, 2.);
+pub const COLOR_ENERGETIC: Color = Color::rgb(2., 1.6, 0.);
+pub const COLOR_FREEZE: Color = Color::rgb(0.7, 1.2, 2.);
 
 pub struct FoodPlugin;
 
@@ -18,31 +23,24 @@ impl Plugin for FoodPlugin {
 
 pub mod components {
   use bevy::prelude::{Color, Component};
-  use rand::{distributions::Standard, prelude::Distribution, Rng};
+
+  use super::{COLOR_BEEFY, COLOR_ENERGETIC, COLOR_FREEZE, COLOR_REGULAR};
 
   #[derive(Debug, Component, Copy, Clone, PartialEq, Eq)]
   pub enum Food {
     Regular,
-    Swiftness,
-    ExtraGrowth,
-  }
-
-  impl Distribution<Food> for Standard {
-    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Food {
-      match rng.gen_range(0..=2) {
-        0 => Food::ExtraGrowth,
-        1 => Food::Swiftness,
-        _ => Food::ExtraGrowth,
-      }
-    }
+    Energetic,
+    Beefy,
+    Frozen,
   }
 
   impl From<Food> for Color {
     fn from(food: Food) -> Self {
       match food {
-        Food::Regular => Color::rgb(2., 2., 0.),
-        Food::Swiftness => Color::rgb(0., 2., 2.),
-        Food::ExtraGrowth => Color::rgb(2., 0.5, 2.),
+        Food::Regular => COLOR_REGULAR,
+        Food::Energetic => COLOR_ENERGETIC,
+        Food::Beefy => COLOR_BEEFY,
+        Food::Frozen => COLOR_FREEZE,
       }
     }
   }

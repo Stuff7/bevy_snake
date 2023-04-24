@@ -8,23 +8,23 @@ use crate::{
     resources::GameBoard,
     utils::{create_cell_bundle, get_board_position},
   },
-  color::components::Brightness,
+  effects::components::{Frozen, Swiftness},
   snake::{
-    components::{Living, Nourished, Snake, Speed},
-    events::{BodySizeChange, SnakeSizeChange},
-    MAX_SERPENTINE_DURATION, MIN_SERPENTINE_DURATION,
+    components::{Living, Satiety, Snake, SnakeBody},
+    events::{BodyResize, SnakeResize},
   },
+  tetris::components::TetrisBlockBundle,
 };
 use bevy::prelude::{
   BuildChildren, Commands, Entity, EventReader, EventWriter, Query, Res, Transform, With,
 };
 use rand::random;
-use std::time::Duration;
 
 pub(super) fn startup(mut spawn_food_writer: EventWriter<SpawnFood>) {
   spawn_food_writer.send(SpawnFood(Food::Regular));
-  spawn_food_writer.send(SpawnFood(Food::ExtraGrowth));
-  spawn_food_writer.send(SpawnFood(Food::Swiftness));
+  spawn_food_writer.send(SpawnFood(Food::Beefy));
+  spawn_food_writer.send(SpawnFood(Food::Energetic));
+  // spawn_food_writer.send(SpawnFood(Food::Frozen));
 }
 
 pub(super) fn spawn(
@@ -65,45 +65,68 @@ pub(super) fn reposition(
 
 pub(super) fn apply_effects(
   mut commands: Commands,
-  mut body_size_change_writer: EventWriter<SnakeSizeChange>,
+  mut body_size_change_writer: EventWriter<SnakeResize>,
   mut food_eaten_reader: EventReader<FoodEaten>,
   mut q_effect: Query<&Food>,
   mut q_snake: Query<
-    (&mut Speed, Option<&mut Nourished>, &mut Brightness),
+    (
+      Entity,
+      Option<&mut Satiety>,
+      Option<&mut Swiftness>,
+      Option<&mut Frozen>,
+    ),
     (With<Snake>, With<Living>),
   >,
 ) {
   for FoodEaten { snake, food } in food_eaten_reader.iter() {
     let Ok(effect) = q_effect.get_mut(*food) else {continue};
     match *effect {
-      Food::Regular => body_size_change_writer.send((*snake, BodySizeChange::Grow)),
-      Food::ExtraGrowth => {
-        let Ok((mut speed, nourished, _)) = q_snake.get_mut(*snake) else {continue};
-        let serpentine_duration = speed.duration();
-        let nourishment = if serpentine_duration < MAX_SERPENTINE_DURATION {
-          speed.set_duration(serpentine_duration + Duration::from_millis(10));
-          4
+      Food::Regular => body_size_change_writer.send((*snake, BodyResize::Grow(1))),
+      Food::Beefy => {
+        let Ok((snake, mut satiety, _, _)) = q_snake.get_mut(*snake) else {continue};
+        if let Some(ref mut level) = satiety {
+          if level.0 < 3 {
+            level.0 += 1;
+          }
         } else {
-          8
-        };
-        if let Some(mut nourished) = nourished {
-          nourished.0 += nourishment;
+          commands.entity(snake).insert(Satiety(1));
+        }
+        body_size_change_writer.send((snake, BodyResize::Grow(2)));
+      }
+      Food::Energetic => {
+        let Ok((snake, _, mut swiftness, _)) = q_snake.get_mut(*snake) else {continue};
+        if let Some(ref mut level) = swiftness {
+          if level.0 > 2. {
+            body_size_change_writer.send((snake, BodyResize::Grow(1)));
+          } else {
+            level.0 += 1.;
+          }
         } else {
-          commands.entity(*snake).insert(Nourished(nourishment));
+          commands.entity(snake).insert(Swiftness(1.));
         }
       }
-      Food::Swiftness => {
-        let Ok((mut speed, _, mut brightness)) = q_snake.get_mut(*snake) else {continue};
-        let serpentine_duration = speed.duration();
-        if brightness.0 < 1.5 {
-          brightness.0 += 0.5;
-        }
-        if serpentine_duration > MIN_SERPENTINE_DURATION {
-          speed.set_duration(serpentine_duration - Duration::from_millis(10));
-        } else {
-          body_size_change_writer.send((*snake, BodySizeChange::Grow));
+      Food::Frozen => {
+        for (other_snake, _, swiftness, mut frozen) in &mut q_snake {
+          if *snake == other_snake || swiftness.map(|s| s.0 == 3.).unwrap_or_default() {
+            continue;
+          }
+          if let Some(ref mut frozen) = frozen {
+            frozen.increase_level();
+          } else {
+            commands.entity(other_snake).insert(Frozen::new());
+          }
         }
       }
     }
   }
+}
+
+pub(super) fn apply_freeze(
+  mut commands: Commands,
+  snake: Entity,
+  q_snake: Query<(&Transform, &SnakeBody), (With<Snake>, With<Living>)>,
+) {
+  let Ok((transform, body)) = q_snake.get(snake) else {return};
+  let (a, b) = body.as_slices();
+  TetrisBlockBundle::insert_to(commands.entity(snake), *transform, &[a, b].concat()[..]);
 }

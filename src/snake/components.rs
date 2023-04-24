@@ -1,16 +1,13 @@
 use crate::{
+  attributes::components::{BaseColor, Brightness, SpeedBundle},
   board::{utils::create_cell_bundle, CELL_SIZE},
-  color::components::{BaseColor, Brightness},
   scoreboard::{components::ScoreEntity, utils::spawn_score},
 };
-use bevy::{
-  prelude::{
-    BuildChildren, Bundle, Color, Commands, Component, Deref, DerefMut, Entity, SpriteBundle, Vec3,
-  },
-  time::{Timer, TimerMode},
+use bevy::prelude::{
+  BuildChildren, Bundle, Color, Commands, Component, Deref, Entity, SpriteBundle, Vec3,
 };
 use rand::Rng;
-use std::{collections::VecDeque, time::Duration};
+use std::collections::VecDeque;
 
 use super::utils::SNAKE_NAMES;
 
@@ -18,7 +15,7 @@ pub struct SnakeConfig {
   pub name: String,
   pub x: f32,
   pub y: f32,
-  pub serpentine_duration_ms: u64,
+  pub speed: f32,
   pub color: Color,
   pub direction: Direction,
   pub tail_length: usize,
@@ -30,7 +27,7 @@ impl Default for SnakeConfig {
       name: SNAKE_NAMES[rand::thread_rng().gen_range(0..50)].to_string(),
       color: Color::WHITE,
       tail_length: 4,
-      serpentine_duration_ms: 100,
+      speed: 1.,
       direction: Direction::default(),
       x: 0.,
       y: 0.,
@@ -47,7 +44,8 @@ pub struct SnakeBundle {
   direction: Direction,
   body: SnakeBody,
   living: Living,
-  speed: Speed,
+  #[bundle]
+  speed_bundle: SpeedBundle,
   #[bundle]
   sprite_bundle: SpriteBundle,
 }
@@ -70,10 +68,7 @@ impl SnakeBundle {
         config.tail_length,
       ),
       living: Living,
-      speed: Speed(Timer::new(
-        Duration::from_millis(config.serpentine_duration_ms),
-        TimerMode::Repeating,
-      )),
+      speed_bundle: SpeedBundle::new(config.speed),
       sprite_bundle: create_cell_bundle(config.color, config.x, config.y),
     }
   }
@@ -85,11 +80,17 @@ pub struct Snake;
 #[derive(Debug, Component)]
 pub struct Living;
 
-#[derive(Debug, Component, DerefMut, Deref)]
-pub struct Speed(Timer);
+#[derive(Debug, Component)]
+pub struct Revive;
+
+#[derive(Debug, Component, Default)]
+pub struct Satiety(pub u32);
 
 #[derive(Debug, Component)]
-pub struct Nourished(pub u32);
+pub struct Nourishment(pub u32);
+
+#[derive(Debug, Component)]
+pub struct Hunger(pub u32);
 
 #[derive(Debug, Component, Default, PartialEq, Clone, Copy)]
 pub enum Direction {
@@ -140,7 +141,7 @@ impl SnakeSegment {
   }
 }
 
-#[derive(Debug, Component)]
+#[derive(Debug, Component, Deref)]
 pub struct SnakeBody(VecDeque<Entity>);
 
 impl SnakeBody {

@@ -4,17 +4,14 @@ use super::{
   INITIAL_PLAYER_LENGTH, PLAYER_COLOR,
 };
 use crate::{
-  board::{components::Board, resources::GameBoard},
-  color::components::Brightness,
+  board::components::Board,
   snake::{
-    components::{Direction, Living, SnakeBundle, SnakeConfig, Speed},
+    components::{Direction, Living, Revive, SnakeBundle, SnakeConfig},
     events::Serpentine,
-    utils::revive_snake,
   },
 };
 use bevy::prelude::{
-  BuildChildren, Commands, Entity, EventReader, Input, KeyCode, Query, Res, Transform, Visibility,
-  With, Without,
+  BuildChildren, Commands, Entity, EventReader, Input, KeyCode, Query, Res, With, Without,
 };
 
 pub(super) fn spawn(mut commands: Commands, q_board: Query<Entity, With<Board>>) {
@@ -40,31 +37,11 @@ pub(super) fn spawn(mut commands: Commands, q_board: Query<Entity, With<Board>>)
 pub(super) fn respawn(
   mut commands: Commands,
   mut respawn_reader: EventReader<RespawnPlayer>,
-  mut q_player: Query<
-    (
-      Entity,
-      &mut Visibility,
-      &mut Transform,
-      &mut Speed,
-      &mut Brightness,
-    ),
-    (With<Player>, Without<Living>),
-  >,
-  game_board: Res<GameBoard>,
+  mut q_player: Query<Entity, (With<Player>, Without<Living>)>,
 ) {
   for _ in respawn_reader.iter() {
-    let Ok((player, mut visibility, mut transform, mut speed, mut brightness)) = q_player.get_single_mut() else {return};
-    revive_snake(
-      &mut commands,
-      (
-        player,
-        &mut visibility,
-        &mut transform,
-        &mut speed,
-        &mut brightness,
-      ),
-      &game_board,
-    );
+    let Ok(player) = q_player.get_single_mut() else {return};
+    commands.entity(player).insert(Revive);
   }
 }
 
