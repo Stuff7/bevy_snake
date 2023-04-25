@@ -1,12 +1,13 @@
 use super::{
   components::{
-    Direction, Hunger, Living, Nourishment, Revive, Satiety, Seeker, Snake, SnakeBody, SnakeSegment,
+    Direction, Hunger, Living, Nourishment, Revive, Satiety, Seeker, Snake, SnakeBody, SnakeBundle,
+    SnakeSegment, SnakeSegmentBundle,
   },
   events::{BodyResize, Serpentine, SnakeResize},
   utils::{snake_crashed, sort_direction_by_nearest},
 };
 use crate::{
-  attributes::components::MoveCooldown,
+  attributes::components::{MoveCooldown, Speed},
   board::{
     components::Board, resources::GameBoard, utils::get_board_position, CELL_SIZE, HALF_CELL_SIZE,
   },
@@ -14,6 +15,7 @@ use crate::{
   effects::components::Swiftness,
   food::{components::Food, events::FoodEaten},
   scoreboard::components::{Name, Score, ScoreEntity},
+  tetris::components::{Tetrified, TetrisBlockBundle},
 };
 use bevy::prelude::{
   Added, BuildChildren, Changed, Commands, Entity, EventReader, EventWriter, Query, Res, Sprite,
@@ -133,7 +135,6 @@ pub(super) fn grow(
     (With<Snake>, With<Living>),
   >,
   q_snake_segment: Query<&Transform, With<SnakeSegment>>,
-  q_board: Query<Entity, With<Board>>,
 ) {
   for snake in &mut serpentine_reader {
     let Ok(
@@ -145,14 +146,15 @@ pub(super) fn grow(
       return;
     }
 
-    let Ok(board) = q_board.get_single() else {continue};
     let tail = q_snake_segment
       .get(body.tail().unwrap_or(snake.0))
       .unwrap_or(head);
     let tail = tail.translation;
     let direction = direction.opposite();
     let (x, y) = (tail.x, tail.y).add(direction.xy(CELL_SIZE, CELL_SIZE));
-    let tail = SnakeSegment::spawn(&mut commands, board, sprite.color, x, y);
+    let tail = commands
+      .spawn(SnakeSegmentBundle::new(sprite.color, x, y))
+      .id();
     body.push_tail(tail);
     nourishment.0 -= 1;
   }
@@ -296,5 +298,26 @@ pub(super) fn seek(
         break;
       }
     }
+  }
+}
+
+pub(super) fn tetrify(
+  mut commands: Commands,
+  mut q_snake: Query<
+    (Entity, &Transform, &Sprite, &Speed, &SnakeBody),
+    (With<Snake>, With<Living>, With<Tetrified>),
+  >,
+) {
+  for (snake, head_transform, head_sprite, speed, body) in &mut q_snake {
+    let (a, b) = body.as_slices();
+    TetrisBlockBundle::insert_to(
+      commands
+        .entity(snake)
+        .remove::<Tetrified>()
+        .remove::<SnakeBundle>(),
+      (*head_transform, head_sprite.clone()),
+      speed.0,
+      &[a, b].concat()[..],
+    );
   }
 }

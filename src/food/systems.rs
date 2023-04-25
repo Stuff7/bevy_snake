@@ -1,19 +1,15 @@
 use super::{
-  components::Food,
+  components::{Food, FoodBundle},
   events::{FoodEaten, SpawnFood},
 };
 use crate::{
-  board::{
-    components::Board,
-    resources::GameBoard,
-    utils::{create_cell_bundle, get_board_position},
-  },
+  board::{components::Board, resources::GameBoard, utils::get_board_position},
   effects::components::{Frozen, Swiftness},
   snake::{
-    components::{Living, Satiety, Snake, SnakeBody},
+    components::{Living, Satiety, Snake},
     events::{BodyResize, SnakeResize},
   },
-  tetris::components::TetrisBlockBundle,
+  tetris::components::Tetrified,
 };
 use bevy::prelude::{
   BuildChildren, Commands, Entity, EventReader, EventWriter, Query, Res, Transform, With,
@@ -24,7 +20,8 @@ pub(super) fn startup(mut spawn_food_writer: EventWriter<SpawnFood>) {
   spawn_food_writer.send(SpawnFood(Food::Regular));
   spawn_food_writer.send(SpawnFood(Food::Beefy));
   spawn_food_writer.send(SpawnFood(Food::Energetic));
-  // spawn_food_writer.send(SpawnFood(Food::Frozen));
+  spawn_food_writer.send(SpawnFood(Food::Frozen));
+  // spawn_food_writer.send(SpawnFood(Food::Tetris));
 }
 
 pub(super) fn spawn(
@@ -35,16 +32,7 @@ pub(super) fn spawn(
 ) {
   for SpawnFood(food) in &mut spawn_food_reader {
     let Ok(board) = q_board.get_single() else {continue};
-    let food = commands
-      .spawn((
-        *food,
-        create_cell_bundle(
-          (*food).into(),
-          (random::<f32>() - 0.5) * game_board.width,
-          (random::<f32>() - 0.5) * game_board.height,
-        ),
-      ))
-      .id();
+    let food = commands.spawn(FoodBundle::new(*food, &game_board)).id();
     commands.entity(board).add_child(food);
   }
 }
@@ -117,16 +105,10 @@ pub(super) fn apply_effects(
           }
         }
       }
+      Food::Tetris => {
+        let Ok((snake, ..)) = q_snake.get_mut(*snake) else {continue};
+        commands.entity(snake).insert(Tetrified);
+      }
     }
   }
-}
-
-pub(super) fn apply_freeze(
-  mut commands: Commands,
-  snake: Entity,
-  q_snake: Query<(&Transform, &SnakeBody), (With<Snake>, With<Living>)>,
-) {
-  let Ok((transform, body)) = q_snake.get(snake) else {return};
-  let (a, b) = body.as_slices();
-  TetrisBlockBundle::insert_to(commands.entity(snake), *transform, &[a, b].concat()[..]);
 }

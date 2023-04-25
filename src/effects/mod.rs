@@ -10,7 +10,6 @@ impl Plugin for EffectPlugin {
   fn build(&self, app: &mut App) {
     app
       .add_system(systems::freeze.run_if(in_state(GameState::Playing)))
-      .add_system(systems::remove_freeze)
       .add_system(systems::remove_swiftness)
       .add_system(systems::transform_speed)
       .add_system(systems::transform_color);

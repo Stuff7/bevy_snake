@@ -12,10 +12,15 @@ use bevy::{
   time::Time,
 };
 
-pub(super) fn freeze(mut q_frozen: Query<&mut Frozen>, timer: Res<Time>) {
-  for mut frozen in &mut q_frozen {
+pub(super) fn freeze(
+  mut commands: Commands,
+  mut q_frozen: Query<(Entity, &mut Frozen)>,
+  timer: Res<Time>,
+) {
+  for (entity, mut frozen) in &mut q_frozen {
     if frozen.finished(timer.delta()) {
       frozen.finish();
+      commands.entity(entity).remove::<Frozen>();
     }
   }
 }
@@ -71,17 +76,6 @@ pub(super) fn transform_color(
         brightness.0 + 0.5 * swiftness.map(|s| s.0).unwrap_or_default(),
       )
     };
-  }
-}
-
-pub(super) fn remove_freeze(
-  mut commands: Commands,
-  mut q_frozen: Query<(Entity, &Frozen), Changed<Frozen>>,
-) {
-  for (entity, frozen) in &mut q_frozen {
-    if frozen.level() == 0 {
-      commands.entity(entity).remove::<Frozen>();
-    }
   }
 }
 

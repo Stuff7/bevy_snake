@@ -1,7 +1,7 @@
 use crate::{
   board::components::Board,
   player::{components::Player, events::RespawnPlayer},
-  scoreboard::components::Name,
+  scoreboard::components::{Name, Score, ScoreEntity},
   snake::{
     components::Snake,
     events::{BodyResize, SnakeResize},
@@ -9,7 +9,8 @@ use crate::{
   state::GameState,
 };
 use bevy::prelude::{
-  Entity, EventWriter, Input, KeyCode, NextState, Query, Res, ResMut, State, Transform, With,
+  Children, Commands, Entity, EventWriter, Input, KeyCode, NextState, Query, Res, ResMut, State,
+  Transform, With,
 };
 
 pub(super) fn god_mode(
@@ -55,15 +56,29 @@ pub(super) fn move_board(
 }
 
 pub(super) fn print_debug_info(
+  mut commands: Commands,
   keyboard_input: Res<Input<KeyCode>>,
   q_entity: Query<Entity>,
-  q_snake: Query<&Name, With<Snake>>,
+  q_scores: Query<&Name, With<Score>>,
+  q_snake: Query<&ScoreEntity, With<Snake>>,
+  q_board: Query<&Children, With<Board>>,
 ) {
   if keyboard_input.just_pressed(KeyCode::O) {
+    let Ok(board) = q_board.get_single() else {return};
     let debug = [
       "=== === === DEBUG === === ===",
       &format!("Entity Count: {}", q_entity.iter().count()),
-      &format!("Snakes: {:#?}", q_snake.iter().collect::<Vec<_>>()),
+      &format!(
+        "Snakes: {:?}",
+        q_snake
+          .iter()
+          .map(|s| q_scores.get(s.0).map(|s| s.0.clone()))
+          .collect::<Vec<_>>()
+      ),
+      &format!(
+        "Board children OK!: {:?}",
+        board.iter().all(|c| commands.get_entity(*c).is_some())
+      ),
     ]
     .join("\n");
     println!("{debug}");

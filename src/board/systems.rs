@@ -1,12 +1,12 @@
 use super::{
-  components::{Board, BoardSprite},
+  components::{Board, BoardSprite, Cell},
   resources::GameBoard,
   BOARD_COLOR, HALF_CELL_SIZE,
 };
 use bevy::{
   prelude::{
-    BuildChildren, Children, Commands, DetectChanges, EventReader, Parent, Query, Res, ResMut,
-    SpatialBundle, Sprite, SpriteBundle, Transform, Vec2, With,
+    Added, BuildChildren, Children, Commands, DetectChanges, Entity, EventReader, Parent, Query,
+    Res, ResMut, SpatialBundle, Sprite, SpriteBundle, Transform, Vec2, Visibility, With,
   },
   window::{PrimaryWindow, Window, WindowResized},
 };
@@ -36,6 +36,18 @@ pub(super) fn spawn(
   commands
     .spawn((Board, SpatialBundle::default()))
     .add_child(board);
+}
+
+pub(super) fn add_cell_to_board(
+  mut commands: Commands,
+  q_board: Query<Entity, With<Board>>,
+  mut q_cells: Query<(Entity, &mut Visibility), Added<Cell>>,
+) {
+  for (cell, mut visibility) in &mut q_cells {
+    let Ok(board) = q_board.get_single() else {return};
+    commands.entity(board).add_child(cell);
+    *visibility = Visibility::Visible;
+  }
 }
 
 pub(super) fn resize_game_board(

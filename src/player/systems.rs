@@ -3,25 +3,18 @@ use super::{
   events::RespawnPlayer,
   INITIAL_PLAYER_LENGTH, PLAYER_COLOR,
 };
-use crate::{
-  board::components::Board,
-  snake::{
-    components::{Direction, Living, Revive, SnakeBundle, SnakeConfig},
-    events::Serpentine,
-  },
+use crate::snake::{
+  components::{Direction, Living, Revive, SnakeBundle, SnakeConfig},
+  events::Serpentine,
 };
-use bevy::prelude::{
-  BuildChildren, Commands, Entity, EventReader, Input, KeyCode, Query, Res, With, Without,
-};
+use bevy::prelude::{Commands, Entity, EventReader, Input, KeyCode, Query, Res, With, Without};
 
-pub(super) fn spawn(mut commands: Commands, q_board: Query<Entity, With<Board>>) {
-  let Ok(board) = q_board.get_single() else {return};
+pub(super) fn spawn(mut commands: Commands) {
   let player = (
     Player,
     DirectionQueue::default(),
     SnakeBundle::new(
       &mut commands,
-      board,
       SnakeConfig {
         name: "Player".to_string(),
         color: PLAYER_COLOR,
@@ -30,8 +23,7 @@ pub(super) fn spawn(mut commands: Commands, q_board: Query<Entity, With<Board>>)
       },
     ),
   );
-  let player = commands.spawn(player).id();
-  commands.entity(board).add_child(player);
+  commands.spawn(player);
 }
 
 pub(super) fn respawn(

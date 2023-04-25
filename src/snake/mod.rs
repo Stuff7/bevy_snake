@@ -34,6 +34,7 @@ impl Plugin for SnakePlugin {
       .add_system(systems::seek)
       .add_system(systems::disappear.run_if(on_timer(SERPENTINE_DURATION)))
       .add_system(systems::die)
+      .add_system(systems::tetrify)
       .add_system(systems::revive);
   }
 }

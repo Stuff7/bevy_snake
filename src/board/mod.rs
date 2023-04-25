@@ -1,5 +1,5 @@
+pub mod components;
 mod systems;
-pub mod utils;
 
 use bevy::prelude::{App, Color, IntoSystemConfig, Plugin, StartupSet, Vec2};
 
@@ -18,18 +18,9 @@ impl Plugin for BoardPlugin {
       .init_resource::<resources::GameBoard>()
       .add_startup_system(systems::spawn.in_base_set(StartupSet::PreStartup))
       .add_system(systems::resize_game_board)
+      .add_system(systems::add_cell_to_board)
       .add_system(systems::constraint_children);
   }
-}
-
-pub mod components {
-  use bevy::prelude::Component;
-
-  #[derive(Debug, Component)]
-  pub struct Board;
-
-  #[derive(Debug, Component)]
-  pub struct BoardSprite;
 }
 
 pub mod resources {
@@ -47,5 +38,18 @@ pub mod resources {
       self.width = 2. * CELL_SIZE * (width * BOARD_WIDTH_FACTOR).floor();
       self.height = 2. * CELL_SIZE * (height * BOARD_HEIGHT_FACTOR).floor();
     }
+  }
+}
+
+pub mod utils {
+  use super::{CELL_SIZE, HALF_CELL_SIZE};
+  use bevy::prelude::Vec3;
+
+  pub fn get_board_position(x: f32, y: f32) -> Vec3 {
+    Vec3::new(
+      (x / CELL_SIZE).floor() * CELL_SIZE + HALF_CELL_SIZE,
+      (y / CELL_SIZE).floor() * CELL_SIZE + HALF_CELL_SIZE,
+      0.,
+    )
   }
 }

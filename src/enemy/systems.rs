@@ -3,7 +3,7 @@ use super::{
   EATER_COLOR, GLUTTON_COLOR, INITIAL_ENEMY_LENGTH, KILLER_COLOR, SPEEDSTER_COLOR,
 };
 use crate::{
-  board::{components::Board, resources::GameBoard},
+  board::resources::GameBoard,
   food::components::Food,
   snake::{
     components::{Living, Revive, Seeker, SnakeBundle, SnakeConfig},
@@ -13,27 +13,17 @@ use crate::{
 use bevy::{
   ecs::query::{ReadOnlyWorldQuery, WorldQuery},
   prelude::{
-    BuildChildren, Changed, Color, Commands, Component, Entity, EventReader, Or, Query, Res,
-    Transform, Vec3, Visibility, With, Without,
+    Changed, Color, Commands, Component, Entity, EventReader, Or, Query, Res, Transform, Vec3,
+    Visibility, With, Without,
   },
 };
 use rand::random;
 
-pub(super) fn spawn_enemies(
-  mut commands: Commands,
-  q_board: Query<Entity, With<Board>>,
-  game_board: Res<GameBoard>,
-) {
-  spawn_single_seeker(Eater, EATER_COLOR, &mut commands, &q_board, &game_board);
-  spawn_single_seeker(Killer, KILLER_COLOR, &mut commands, &q_board, &game_board);
-  spawn_single_seeker(
-    Speedster,
-    SPEEDSTER_COLOR,
-    &mut commands,
-    &q_board,
-    &game_board,
-  );
-  spawn_single_seeker(Glutton, GLUTTON_COLOR, &mut commands, &q_board, &game_board);
+pub(super) fn spawn_enemies(mut commands: Commands, game_board: Res<GameBoard>) {
+  spawn_single_seeker(Eater, EATER_COLOR, &mut commands, &game_board);
+  spawn_single_seeker(Killer, KILLER_COLOR, &mut commands, &game_board);
+  spawn_single_seeker(Speedster, SPEEDSTER_COLOR, &mut commands, &game_board);
+  spawn_single_seeker(Glutton, GLUTTON_COLOR, &mut commands, &game_board);
 }
 
 pub(super) fn respawn(
@@ -123,17 +113,14 @@ fn spawn_single_seeker<C: Component>(
   id_component: C,
   color: Color,
   commands: &mut Commands,
-  q_board: &Query<Entity, With<Board>>,
   game_board: &GameBoard,
 ) {
-  let Ok(board) = q_board.get_single() else {return};
   let enemy = (
     Enemy,
     id_component,
     Seeker::default(),
     SnakeBundle::new(
       commands,
-      board,
       SnakeConfig {
         x: (random::<f32>() - 0.5) * game_board.width,
         y: (random::<f32>() - 0.5) * game_board.height,
@@ -143,6 +130,5 @@ fn spawn_single_seeker<C: Component>(
       },
     ),
   );
-  let enemy = commands.spawn(enemy).id();
-  commands.entity(board).add_child(enemy);
+  commands.spawn(enemy);
 }
