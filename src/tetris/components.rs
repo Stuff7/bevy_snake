@@ -10,6 +10,9 @@ use crate::{
 pub struct TetrisBlock;
 
 #[derive(Debug, Component)]
+pub struct Placed;
+
+#[derive(Debug, Component)]
 pub struct BlockPart;
 
 #[derive(Bundle)]

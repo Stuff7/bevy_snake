@@ -13,7 +13,6 @@ impl Plugin for TetrisPlugin {
       .add_event::<events::TetrisMove>()
       .add_system(systems::fall.run_if(in_state(GameState::Playing)))
       .add_system(systems::move_parts)
-      .add_system(systems::place)
       .add_system(systems::snakify);
   }
 }
