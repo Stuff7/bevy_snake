@@ -7,15 +7,15 @@ use super::{
   utils::{snake_crashed, sort_direction_by_nearest},
 };
 use crate::{
-  attributes::components::{MoveCooldown, Speed},
+  attributes::components::{BaseColor, Brightness, ColorBundle, MoveCooldown, Solid, Speed},
   board::{
     components::Board, resources::GameBoard, utils::get_board_position, CELL_SIZE, HALF_CELL_SIZE,
   },
   collections::ExternalOps,
-  effects::components::Swiftness,
+  effects::components::{Invincibility, Swiftness},
   food::{components::Food, events::FoodEaten},
   scoreboard::components::{Name, Score, ScoreEntity},
-  tetris::components::{Tetrified, TetrisBlockBundle},
+  tetris::components::{BlockPart, BlockPartBundle, Tetrified, TetrisBlockBundle},
 };
 use bevy::prelude::{
   Added, BuildChildren, Changed, Commands, Entity, EventReader, EventWriter, Query, Res, Sprite,
@@ -203,16 +203,19 @@ pub(super) fn eat(
 pub(super) fn die(
   mut commands: Commands,
   mut serpentine_reader: EventReader<Serpentine>,
-  q_snake_head: Query<(Entity, &Transform), (With<Snake>, With<Living>)>,
-  q_snake_segment: Query<&Transform, With<SnakeSegment>>,
+  q_snake_head: Query<(Entity, &Transform, Option<&Invincibility>), (With<Snake>, With<Living>)>,
+  q_solids: Query<&Transform, With<Solid>>,
 ) {
   for Serpentine(snake_entity, snake_head) in serpentine_reader.iter().copied() {
-    if snake_crashed(
-      q_snake_head.iter().map(|h| (h.0, h.1.translation)),
-      q_snake_segment.iter().map(|h| h.translation),
-      snake_entity,
-      snake_head,
-    ) {
+    let Ok((_, _, invincible)) = q_snake_head.get(snake_entity) else {continue};
+    if invincible.is_none()
+      && snake_crashed(
+        q_snake_head.iter().map(|h| (h.0, h.1.translation)),
+        q_solids.iter().map(|h| h.translation),
+        snake_entity,
+        snake_head,
+      )
+    {
       commands.entity(snake_entity).remove::<Living>();
       return;
     }
@@ -276,8 +279,8 @@ pub(super) fn update_score(
 pub(super) fn seek(
   mut serpentine_reader: EventReader<Serpentine>,
   mut q_seeker: Query<(&Seeker, &mut Direction)>,
-  q_snake_head: Query<(Entity, &Transform), (With<Snake>, Without<SnakeSegment>)>,
-  q_snake_segment: Query<&Transform, With<SnakeSegment>>,
+  q_snake_head: Query<(Entity, &Transform), (With<Snake>, Without<Solid>)>,
+  q_solids: Query<&Transform, With<Solid>>,
   game_board: Res<GameBoard>,
 ) {
   for Serpentine(enemy_entity, head) in serpentine_reader.iter().copied() {
@@ -290,7 +293,7 @@ pub(super) fn seek(
       let head = Vec3::new(x, y, 0.);
       if !snake_crashed(
         q_snake_head.iter().map(|h| (h.0, h.1.translation)),
-        q_snake_segment.iter().map(|h| h.translation),
+        q_solids.iter().map(|h| h.translation),
         enemy_entity,
         head,
       ) {
@@ -304,20 +307,42 @@ pub(super) fn seek(
 pub(super) fn tetrify(
   mut commands: Commands,
   mut q_snake: Query<
-    (Entity, &Transform, &Sprite, &Speed, &SnakeBody),
+    (
+      Entity,
+      &SnakeBody,
+      &ScoreEntity,
+      &Transform,
+      &Speed,
+      &BaseColor,
+      &Brightness,
+    ),
     (With<Snake>, With<Living>, With<Tetrified>),
   >,
 ) {
-  for (snake, head_transform, head_sprite, speed, body) in &mut q_snake {
-    let (a, b) = body.as_slices();
-    TetrisBlockBundle::insert_to(
+  for (snake, body, score, transform, speed, color, brightness) in &mut q_snake {
+    for part in body.iter() {
       commands
-        .entity(snake)
-        .remove::<Tetrified>()
-        .remove::<SnakeBundle>(),
-      (*head_transform, head_sprite.clone()),
-      speed.0,
-      &[a, b].concat()[..],
-    );
+        .entity(*part)
+        .remove::<SnakeSegment>()
+        .insert(BlockPart);
+    }
+    let (a, b) = body.as_slices();
+    let head = commands
+      .spawn(BlockPartBundle::new(
+        color.0,
+        transform.translation.x,
+        transform.translation.y,
+      ))
+      .id();
+    commands
+      .entity(snake)
+      .remove::<Tetrified>()
+      .remove::<SnakeBundle>()
+      .insert(TetrisBlockBundle::new(
+        &[&[head], a, b].concat()[..],
+        ColorBundle::new(color.0, brightness.0),
+        score.0,
+        speed.0,
+      ));
   }
 }

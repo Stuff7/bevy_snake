@@ -1,46 +1,60 @@
-use bevy::{
-  ecs::system::EntityCommands,
-  prelude::{BuildChildren, Bundle, Component, Entity, Transform},
-  sprite::{Sprite, SpriteBundle},
-};
+use bevy::prelude::{Bundle, Color, Component, Entity};
 
-use crate::attributes::components::SpeedBundle;
+use crate::{
+  attributes::components::{ColorBundle, Solid, SpeedBundle},
+  board::components::CellBundle,
+  scoreboard::components::ScoreEntity,
+};
 
 #[derive(Debug, Component)]
 pub struct TetrisBlock;
 
 #[derive(Debug, Component)]
-pub struct Tetrified;
+pub struct BlockPart;
+
+#[derive(Bundle)]
+pub struct BlockPartBundle {
+  part: BlockPart,
+  solid: Solid,
+  #[bundle]
+  cell_bundle: CellBundle,
+}
+
+impl BlockPartBundle {
+  pub fn new(color: Color, x: f32, y: f32) -> Self {
+    Self {
+      part: BlockPart,
+      solid: Solid,
+      cell_bundle: CellBundle::new(color, x, y),
+    }
+  }
+}
 
 #[derive(Debug, Component)]
-pub struct Placed;
+pub struct BlockParts(pub Vec<Entity>);
+
+#[derive(Debug, Component)]
+pub struct Tetrified;
 
 #[derive(Bundle)]
 pub struct TetrisBlockBundle {
   block: TetrisBlock,
+  parts: BlockParts,
+  score: ScoreEntity,
+  #[bundle]
+  color_bundle: ColorBundle,
   #[bundle]
   speed_bundle: SpeedBundle,
-  #[bundle]
-  sprite_bundle: SpriteBundle,
 }
 
 impl TetrisBlockBundle {
-  pub fn insert_to(
-    entity: &mut EntityCommands,
-    (head_transform, head_sprite): (Transform, Sprite),
-    speed: f32,
-    children: &[Entity],
-  ) {
-    entity
-      .insert(Self {
-        block: TetrisBlock,
-        speed_bundle: SpeedBundle::new(speed),
-        sprite_bundle: SpriteBundle {
-          transform: head_transform,
-          sprite: head_sprite,
-          ..Default::default()
-        },
-      })
-      .push_children(children);
+  pub fn new(parts: &[Entity], color_bundle: ColorBundle, score: Entity, speed: f32) -> Self {
+    Self {
+      block: TetrisBlock,
+      parts: BlockParts(parts.into()),
+      score: ScoreEntity(score),
+      color_bundle,
+      speed_bundle: SpeedBundle::new(speed),
+    }
   }
 }

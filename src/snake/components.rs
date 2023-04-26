@@ -1,5 +1,5 @@
 use crate::{
-  attributes::components::{BaseColor, Brightness, SpeedBundle},
+  attributes::components::{ColorBundle, Solid, SpeedBundle},
   board::{components::CellBundle, CELL_SIZE},
   scoreboard::{components::ScoreEntity, utils::spawn_score},
 };
@@ -15,8 +15,10 @@ pub struct SnakeConfig {
   pub y: f32,
   pub speed: f32,
   pub color: Color,
+  pub brightness: f32,
   pub direction: Direction,
   pub tail_length: usize,
+  pub score: Option<Entity>,
 }
 
 impl Default for SnakeConfig {
@@ -24,11 +26,13 @@ impl Default for SnakeConfig {
     Self {
       name: SNAKE_NAMES[rand::thread_rng().gen_range(0..50)].to_string(),
       color: Color::WHITE,
+      brightness: 0.,
       tail_length: 4,
       speed: 1.,
       direction: Direction::default(),
       x: 0.,
       y: 0.,
+      score: None,
     }
   }
 }
@@ -36,12 +40,12 @@ impl Default for SnakeConfig {
 #[derive(Bundle)]
 pub struct SnakeBundle {
   snake: Snake,
-  color: BaseColor,
-  brightness: Brightness,
   score: ScoreEntity,
   direction: Direction,
   body: SnakeBody,
   living: Living,
+  #[bundle]
+  color_bundle: ColorBundle,
   #[bundle]
   speed_bundle: SpeedBundle,
   #[bundle]
@@ -50,11 +54,11 @@ pub struct SnakeBundle {
 
 impl SnakeBundle {
   pub fn new(commands: &mut Commands, config: SnakeConfig) -> Self {
-    let score = spawn_score(commands, config.tail_length, config.name, config.color);
+    let score = config
+      .score
+      .unwrap_or_else(|| spawn_score(commands, config.tail_length, config.name, config.color));
     Self {
       snake: Snake,
-      color: BaseColor(config.color),
-      brightness: Brightness::default(),
       score: ScoreEntity(score),
       direction: config.direction,
       body: SnakeBody::new(
@@ -65,6 +69,7 @@ impl SnakeBundle {
         config.tail_length,
       ),
       living: Living,
+      color_bundle: ColorBundle::new(config.color, config.brightness),
       speed_bundle: SpeedBundle::new(config.speed),
       cell_bundle: CellBundle::new(config.color, config.x, config.y),
     }
@@ -73,6 +78,9 @@ impl SnakeBundle {
 
 #[derive(Debug, Component)]
 pub struct Snake;
+
+#[derive(Debug, Component)]
+pub struct Snakified;
 
 #[derive(Debug, Component)]
 pub struct Living;
@@ -125,6 +133,7 @@ pub struct SnakeSegment;
 #[derive(Bundle)]
 pub struct SnakeSegmentBundle {
   segment: SnakeSegment,
+  solid: Solid,
   #[bundle]
   cell_bundle: CellBundle,
 }
@@ -133,6 +142,7 @@ impl SnakeSegmentBundle {
   pub(super) fn new(color: Color, x: f32, y: f32) -> Self {
     Self {
       segment: SnakeSegment,
+      solid: Solid,
       cell_bundle: CellBundle::new(color, x, y),
     }
   }

@@ -4,11 +4,29 @@ pub mod components {
   use bevy::prelude::{Bundle, Color, Component};
   use bevy::time::{Timer, TimerMode};
 
+  #[derive(Debug, Component)]
+  pub struct Solid;
+
   #[derive(Debug, Component, Default)]
   pub struct Brightness(pub f32);
 
   #[derive(Debug, Component, Default)]
   pub struct BaseColor(pub Color);
+
+  #[derive(Debug, Bundle, Default)]
+  pub struct ColorBundle {
+    color: BaseColor,
+    brightness: Brightness,
+  }
+
+  impl ColorBundle {
+    pub fn new(color: Color, brightness: f32) -> Self {
+      Self {
+        color: BaseColor(color),
+        brightness: Brightness(brightness),
+      }
+    }
+  }
 
   #[derive(Debug, Component)]
   pub struct MoveCooldown(pub Timer);

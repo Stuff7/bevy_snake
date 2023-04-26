@@ -1,4 +1,4 @@
-use super::components::{Frozen, Swiftness};
+use super::components::{Frozen, Invincibility, Swiftness};
 use crate::{
   attributes::{
     components::{BaseColor, Brightness, MoveCooldown, Speed},
@@ -21,6 +21,20 @@ pub(super) fn freeze(
     if frozen.finished(timer.delta()) {
       frozen.finish();
       commands.entity(entity).remove::<Frozen>();
+    }
+  }
+}
+
+pub(super) fn invincibility_timer(
+  mut commands: Commands,
+  mut q_invincibilty: Query<(Entity, &mut Invincibility, &mut Sprite)>,
+  timer: Res<Time>,
+) {
+  for (entity, mut invincibility, mut sprite) in &mut q_invincibilty {
+    sprite.color.set_a(0.25);
+    if invincibility.finished(timer.delta()) {
+      sprite.color.set_a(1.);
+      commands.entity(entity).remove::<Invincibility>();
     }
   }
 }

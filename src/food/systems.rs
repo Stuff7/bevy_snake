@@ -21,7 +21,7 @@ pub(super) fn startup(mut spawn_food_writer: EventWriter<SpawnFood>) {
   spawn_food_writer.send(SpawnFood(Food::Beefy));
   spawn_food_writer.send(SpawnFood(Food::Energetic));
   spawn_food_writer.send(SpawnFood(Food::Frozen));
-  // spawn_food_writer.send(SpawnFood(Food::Tetris));
+  spawn_food_writer.send(SpawnFood(Food::Tetris));
 }
 
 pub(super) fn spawn(

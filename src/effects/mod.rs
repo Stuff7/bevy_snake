@@ -12,7 +12,8 @@ impl Plugin for EffectPlugin {
       .add_system(systems::freeze.run_if(in_state(GameState::Playing)))
       .add_system(systems::remove_swiftness)
       .add_system(systems::transform_speed)
-      .add_system(systems::transform_color);
+      .add_system(systems::transform_color)
+      .add_system(systems::invincibility_timer);
   }
 }
 
@@ -24,6 +25,7 @@ pub mod components {
   use std::time::Duration;
 
   const FROZEN_SECONDS: u64 = 2;
+  const INVINCIBILITY_SECONDS: u64 = 5;
 
   #[derive(Debug, Component, Default)]
   pub struct Swiftness(pub f32);
@@ -67,6 +69,23 @@ pub mod components {
     pub fn finished(&mut self, delta: Duration) -> bool {
       self.cooldown.tick(delta);
       self.cooldown.finished()
+    }
+  }
+
+  #[derive(Debug, Component)]
+  pub struct Invincibility(Timer);
+
+  impl Invincibility {
+    pub fn new() -> Self {
+      Self(Timer::new(
+        Duration::from_secs(INVINCIBILITY_SECONDS),
+        TimerMode::Once,
+      ))
+    }
+
+    pub fn finished(&mut self, delta: Duration) -> bool {
+      self.0.tick(delta);
+      self.0.finished()
     }
   }
 }
