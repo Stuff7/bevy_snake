@@ -2,7 +2,7 @@ use super::{
   components::{Board, BoardSprite, Cell, DyingCell, RandomCellPosition},
   resources::GameBoard,
   utils::iter_cells,
-  BOARD_COLOR, CELL_SIZE, HALF_CELL_SIZE,
+  BOARD_COLOR, HALF_CELL_SIZE,
 };
 use bevy::{
   prelude::{
@@ -73,7 +73,6 @@ pub(super) fn position_cell_randomly(
 ) {
   for (entity, mut cell) in &mut q_repositioned_cells {
     let mut rows = iter_cells(0.5 * game_board.height).collect::<Vec<_>>();
-    let mut cells = q_cells.iter();
     commands.entity(entity).remove::<RandomCellPosition>();
     let Some(new_position) = (loop {
       if rows.is_empty() {
@@ -83,11 +82,7 @@ pub(super) fn position_cell_randomly(
       let mut available_cells = iter_cells(0.5 * game_board.width)
         .filter_map(|x| {
           let position = Vec3::new(x, y, 0.);
-          (!cells.any(|c| {
-            c.translation == position ||
-            c.translation + Vec3::new(-CELL_SIZE, 0., 0.) == position ||
-            c.translation + Vec3::new(CELL_SIZE, 0., 0.) == position
-          })).then_some(position)
+          (!q_cells.iter().any(|c| c.translation == position)).then_some(position)
         })
         .collect::<Vec<_>>();
       if !available_cells.is_empty() {

@@ -20,10 +20,10 @@ use bevy::{
 use rand::random;
 
 pub(super) fn spawn_enemies(mut commands: Commands, game_board: Res<GameBoard>) {
-  // spawn_single_seeker(Omnivorous, OMNIVOROUS_COLOR, &mut commands, &game_board);
-  // spawn_single_seeker(Killer, KILLER_COLOR, &mut commands, &game_board);
-  // spawn_single_seeker(Speedster, SPEEDSTER_COLOR, &mut commands, &game_board);
-  // spawn_single_seeker(Glutton, GLUTTON_COLOR, &mut commands, &game_board);
+  spawn_single_seeker(Omnivorous, OMNIVOROUS_COLOR, &mut commands, &game_board);
+  spawn_single_seeker(Killer, KILLER_COLOR, &mut commands, &game_board);
+  spawn_single_seeker(Speedster, SPEEDSTER_COLOR, &mut commands, &game_board);
+  spawn_single_seeker(Glutton, GLUTTON_COLOR, &mut commands, &game_board);
 }
 
 pub(super) fn respawn(
