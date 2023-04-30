@@ -14,6 +14,12 @@ pub struct BoardSprite;
 #[derive(Debug, Component)]
 pub struct Cell;
 
+#[derive(Debug, Component)]
+pub struct DyingCell;
+
+#[derive(Debug, Component)]
+pub struct RandomCellPosition;
+
 #[derive(Bundle)]
 pub struct CellBundle {
   cell: Cell,

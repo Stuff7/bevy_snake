@@ -17,8 +17,7 @@ impl Plugin for FoodPlugin {
       .add_event::<events::FoodEaten>()
       .add_startup_system(systems::startup)
       .add_system(systems::spawn)
-      .add_system(systems::reposition)
-      .add_system(systems::apply_effects);
+      .add_system(systems::consume);
   }
 }
 
@@ -77,7 +76,7 @@ pub mod events {
   use bevy::prelude::Entity;
 
   pub struct FoodEaten {
-    pub snake: Entity,
+    pub eater: Entity,
     pub food: Entity,
   }
 

@@ -1,6 +1,6 @@
 use super::{
-  components::{Eater, Enemy, Glutton, Killer, Speedster},
-  EATER_COLOR, GLUTTON_COLOR, INITIAL_ENEMY_LENGTH, KILLER_COLOR, SPEEDSTER_COLOR,
+  components::{Enemy, Glutton, Killer, Omnivorous, Speedster},
+  GLUTTON_COLOR, INITIAL_ENEMY_LENGTH, KILLER_COLOR, OMNIVOROUS_COLOR, SPEEDSTER_COLOR,
 };
 use crate::{
   board::resources::GameBoard,
@@ -20,10 +20,10 @@ use bevy::{
 use rand::random;
 
 pub(super) fn spawn_enemies(mut commands: Commands, game_board: Res<GameBoard>) {
-  spawn_single_seeker(Eater, EATER_COLOR, &mut commands, &game_board);
-  spawn_single_seeker(Killer, KILLER_COLOR, &mut commands, &game_board);
-  spawn_single_seeker(Speedster, SPEEDSTER_COLOR, &mut commands, &game_board);
-  spawn_single_seeker(Glutton, GLUTTON_COLOR, &mut commands, &game_board);
+  // spawn_single_seeker(Omnivorous, OMNIVOROUS_COLOR, &mut commands, &game_board);
+  // spawn_single_seeker(Killer, KILLER_COLOR, &mut commands, &game_board);
+  // spawn_single_seeker(Speedster, SPEEDSTER_COLOR, &mut commands, &game_board);
+  // spawn_single_seeker(Glutton, GLUTTON_COLOR, &mut commands, &game_board);
 }
 
 pub(super) fn respawn(
@@ -37,7 +37,7 @@ pub(super) fn respawn(
 
 pub(super) fn seek_food(
   mut serpentine_reader: EventReader<Serpentine>,
-  mut q_seeker: Query<&mut Seeker, (With<Enemy>, With<Eater>)>,
+  mut q_seeker: Query<&mut Seeker, (With<Enemy>, With<Omnivorous>)>,
   q_target: Query<&Transform, With<Food>>,
 ) {
   for Serpentine(seeker, head) in serpentine_reader.iter().copied() {

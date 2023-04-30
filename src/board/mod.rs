@@ -18,7 +18,9 @@ impl Plugin for BoardPlugin {
       .init_resource::<resources::GameBoard>()
       .add_startup_system(systems::spawn.in_base_set(StartupSet::PreStartup))
       .add_system(systems::resize_game_board)
-      .add_system(systems::add_cell_to_board)
+      .add_system(systems::add_cell)
+      .add_system(systems::remove_cell)
+      .add_system(systems::position_cell_randomly)
       .add_system(systems::constraint_children);
   }
 }
@@ -45,11 +47,17 @@ pub mod utils {
   use super::{CELL_SIZE, HALF_CELL_SIZE};
   use bevy::prelude::Vec3;
 
+  pub fn snap_to_axis(n: f32) -> f32 {
+    (n / CELL_SIZE).floor() * CELL_SIZE + HALF_CELL_SIZE
+  }
+
   pub fn get_board_position(x: f32, y: f32) -> Vec3 {
-    Vec3::new(
-      (x / CELL_SIZE).floor() * CELL_SIZE + HALF_CELL_SIZE,
-      (y / CELL_SIZE).floor() * CELL_SIZE + HALF_CELL_SIZE,
-      0.,
-    )
+    Vec3::new(snap_to_axis(x), snap_to_axis(y), 0.)
+  }
+
+  pub fn iter_cells(size: f32) -> impl Iterator<Item = f32> {
+    ((HALF_CELL_SIZE - size) as i32..size.ceil() as i32)
+      .step_by(CELL_SIZE as usize)
+      .map(|i| snap_to_axis(i as f32))
   }
 }

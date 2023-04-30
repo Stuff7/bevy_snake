@@ -1,7 +1,8 @@
 use crate::{
   attributes::components::{BaseColor, Brightness, MoveCooldown, Speed},
-  board::{resources::GameBoard, CELL_SIZE},
+  board::{components::RandomCellPosition, resources::GameBoard, CELL_SIZE},
   effects::components::Invincibility,
+  food::components::Food,
   scoreboard::components::{Score, ScoreEntity},
   snake::components::{SnakeBundle, SnakeConfig, Snakified},
 };
@@ -54,9 +55,11 @@ pub(super) fn fall(
 }
 
 pub(super) fn move_parts(
+  mut commands: Commands,
   mut move_reader: EventReader<TetrisMove>,
-  mut q_blocks: Query<&BlockParts, With<TetrisBlock>>,
-  mut q_block_parts: Query<&mut Transform, (With<BlockPart>, Without<TetrisBlock>)>,
+  mut q_blocks: Query<&BlockParts, (With<TetrisBlock>, Without<Food>)>,
+  mut q_block_parts: Query<&mut Transform, (With<BlockPart>, Without<TetrisBlock>, Without<Food>)>,
+  q_food: Query<(Entity, &Transform), (With<Food>, Without<TetrisBlock>, Without<BlockPart>)>,
 ) {
   for movement in &mut move_reader {
     let (entity, translation) = match *movement {
@@ -68,6 +71,12 @@ pub(super) fn move_parts(
     for part in &parts.0 {
       let Ok(mut part) = q_block_parts.get_mut(*part) else {continue};
       part.translation += translation;
+      if let Some((food, _)) = q_food
+        .iter()
+        .find(|(_, food)| part.translation == food.translation)
+      {
+        commands.entity(food).insert(RandomCellPosition);
+      }
     }
   }
 }

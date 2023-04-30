@@ -1,15 +1,18 @@
 use super::{
-  components::{Board, BoardSprite, Cell},
+  components::{Board, BoardSprite, Cell, DyingCell, RandomCellPosition},
   resources::GameBoard,
-  BOARD_COLOR, HALF_CELL_SIZE,
+  utils::iter_cells,
+  BOARD_COLOR, CELL_SIZE, HALF_CELL_SIZE,
 };
 use bevy::{
   prelude::{
     Added, BuildChildren, Children, Commands, DetectChanges, Entity, EventReader, Parent, Query,
-    Res, ResMut, SpatialBundle, Sprite, SpriteBundle, Transform, Vec2, Visibility, With,
+    Res, ResMut, SpatialBundle, Sprite, SpriteBundle, Transform, Vec2, Vec3, Visibility, With,
+    Without,
   },
   window::{PrimaryWindow, Window, WindowResized},
 };
+use rand::random;
 
 pub(super) fn spawn(
   mut commands: Commands,
@@ -38,7 +41,7 @@ pub(super) fn spawn(
     .add_child(board);
 }
 
-pub(super) fn add_cell_to_board(
+pub(super) fn add_cell(
   mut commands: Commands,
   q_board: Query<Entity, With<Board>>,
   mut q_cells: Query<(Entity, &mut Visibility), Added<Cell>>,
@@ -47,6 +50,51 @@ pub(super) fn add_cell_to_board(
     let Ok(board) = q_board.get_single() else {return};
     commands.entity(board).add_child(cell);
     *visibility = Visibility::Visible;
+  }
+}
+
+pub(super) fn remove_cell(
+  mut commands: Commands,
+  q_board: Query<Entity, With<Board>>,
+  mut q_cells: Query<Entity, Added<DyingCell>>,
+) {
+  for cell in &mut q_cells {
+    let Ok(board) = q_board.get_single() else {return};
+    commands.entity(board).remove_children(&[cell]);
+    commands.entity(cell).despawn();
+  }
+}
+
+pub(super) fn position_cell_randomly(
+  mut commands: Commands,
+  mut q_repositioned_cells: Query<(Entity, &mut Transform), Added<RandomCellPosition>>,
+  q_cells: Query<&Transform, (With<Cell>, Without<DyingCell>, Without<RandomCellPosition>)>,
+  game_board: Res<GameBoard>,
+) {
+  for (entity, mut cell) in &mut q_repositioned_cells {
+    let mut rows = iter_cells(0.5 * game_board.height).collect::<Vec<_>>();
+    let mut cells = q_cells.iter();
+    commands.entity(entity).remove::<RandomCellPosition>();
+    let Some(new_position) = (loop {
+      if rows.is_empty() {
+        break None;
+      }
+      let y = rows.remove(random::<usize>() % rows.len());
+      let mut available_cells = iter_cells(0.5 * game_board.width)
+        .filter_map(|x| {
+          let position = Vec3::new(x, y, 0.);
+          (!cells.any(|c| {
+            c.translation == position ||
+            c.translation + Vec3::new(-CELL_SIZE, 0., 0.) == position ||
+            c.translation + Vec3::new(CELL_SIZE, 0., 0.) == position
+          })).then_some(position)
+        })
+        .collect::<Vec<_>>();
+      if !available_cells.is_empty() {
+        break Some(available_cells.remove(random::<usize>() % available_cells.len()));
+      }
+    }) else {println!("COULD NOT FIND EMPTY SPOTS"); return};
+    cell.translation = new_position;
   }
 }
 

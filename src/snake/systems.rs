@@ -9,7 +9,9 @@ use super::{
 use crate::{
   attributes::components::{BaseColor, Brightness, ColorBundle, MoveCooldown, Solid, Speed},
   board::{
-    components::Board, resources::GameBoard, utils::get_board_position, CELL_SIZE, HALF_CELL_SIZE,
+    components::{DyingCell, RandomCellPosition},
+    resources::GameBoard,
+    CELL_SIZE, HALF_CELL_SIZE,
   },
   collections::ExternalOps,
   effects::components::{Invincibility, Swiftness},
@@ -18,10 +20,9 @@ use crate::{
   tetris::components::{BlockPart, BlockPartBundle, Tetrified, TetrisBlockBundle},
 };
 use bevy::prelude::{
-  Added, BuildChildren, Changed, Commands, Entity, EventReader, EventWriter, Query, Res, Sprite,
-  Time, Transform, Vec3, Visibility, With, Without,
+  Added, Changed, Commands, Entity, EventReader, EventWriter, Query, Res, Sprite, Time, Transform,
+  Vec3, Visibility, With, Without,
 };
-use rand::random;
 
 pub(super) fn serpentine(
   mut serpentine_writer: EventWriter<Serpentine>,
@@ -194,7 +195,7 @@ pub(super) fn eat(
   for Serpentine(snake, head) in serpentine_reader.iter().copied() {
     for (food, food_transform) in &q_food {
       if food_transform.translation.distance(head) < CELL_SIZE {
-        food_eaten_writer.send(FoodEaten { snake, food });
+        food_eaten_writer.send(FoodEaten { eater: snake, food });
       }
     }
   }
@@ -224,14 +225,10 @@ pub(super) fn die(
 
 pub(super) fn revive(
   mut commands: Commands,
-  mut q_snake: Query<(Entity, &mut Visibility, &mut Transform), (Added<Revive>, With<Snake>)>,
-  game_board: Res<GameBoard>,
+  mut q_snake: Query<(Entity, &mut Visibility), (Added<Revive>, With<Snake>)>,
 ) {
-  for (snake, mut visibility, mut transform) in &mut q_snake {
-    transform.translation = get_board_position(
-      (random::<f32>() - 0.5) * game_board.width,
-      (random::<f32>() - 0.5) * game_board.height,
-    );
+  for (snake, mut visibility) in &mut q_snake {
+    commands.entity(snake).insert(RandomCellPosition);
     *visibility = Visibility::Visible;
     commands
       .entity(snake)
@@ -249,14 +246,11 @@ pub(super) fn disappear(
     (With<Snake>, Without<Living>),
   >,
   q_scores: Query<&Name, With<Score>>,
-  q_board: Query<Entity, With<Board>>,
 ) {
   for (score, mut visibility, mut body) in &mut q_snakes {
-    let Ok(board) = q_board.get_single() else {return};
     let Ok(name) = q_scores.get(score.0) else {return};
     if let Some(tail) = body.pop_tail() {
-      commands.entity(board).remove_children(&[tail]);
-      commands.entity(tail).despawn();
+      commands.entity(tail).insert(DyingCell);
     } else if *visibility != Visibility::Hidden {
       println!("☠️ {}", name.0);
       *visibility = Visibility::Hidden;
@@ -320,26 +314,34 @@ pub(super) fn tetrify(
   >,
 ) {
   for (snake, body, score, transform, speed, color, brightness) in &mut q_snake {
-    for part in body.iter() {
+    let parts = std::iter::once(
+      commands
+        .spawn(BlockPartBundle::new(
+          color.0,
+          transform.translation.x,
+          transform.translation.y,
+        ))
+        .id(),
+    )
+    .chain(body.iter().take(3).map(|part| {
       commands
         .entity(*part)
         .remove::<SnakeSegment>()
         .insert(BlockPart);
+      *part
+    }))
+    .collect::<Vec<_>>();
+
+    for part in body.iter().skip(3) {
+      commands.entity(*part).insert(DyingCell);
     }
-    let (a, b) = body.as_slices();
-    let head = commands
-      .spawn(BlockPartBundle::new(
-        color.0,
-        transform.translation.x,
-        transform.translation.y,
-      ))
-      .id();
+
     commands
       .entity(snake)
       .remove::<Tetrified>()
       .remove::<SnakeBundle>()
       .insert(TetrisBlockBundle::new(
-        &[&[head], a, b].concat()[..],
+        &parts,
         ColorBundle::new(color.0, brightness.0),
         score.0,
         speed.0,

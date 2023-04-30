@@ -1,5 +1,6 @@
 use crate::{
   board::components::Board,
+  food::components::Food,
   player::{components::Player, events::RespawnPlayer},
   scoreboard::components::{Name, Score, ScoreEntity},
   snake::{
@@ -7,10 +8,11 @@ use crate::{
     events::{BodyResize, SnakeResize},
   },
   state::GameState,
+  tetris::components::Placed,
 };
 use bevy::prelude::{
   Children, Commands, Entity, EventWriter, Input, KeyCode, NextState, Query, Res, ResMut, State,
-  Transform, With,
+  Transform, With, Without,
 };
 
 pub(super) fn god_mode(
@@ -55,12 +57,15 @@ pub(super) fn move_board(
   }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(super) fn print_debug_info(
   mut commands: Commands,
   keyboard_input: Res<Input<KeyCode>>,
   q_entity: Query<Entity>,
   q_scores: Query<&Name, With<Score>>,
   q_snake: Query<&ScoreEntity, With<Snake>>,
+  q_placed_blocks: Query<&Transform, (With<Placed>, Without<Food>)>,
+  q_food: Query<&Transform, (With<Food>, Without<Placed>)>,
   q_board: Query<&Children, With<Board>>,
 ) {
   if keyboard_input.just_pressed(KeyCode::O) {
@@ -78,6 +83,20 @@ pub(super) fn print_debug_info(
       &format!(
         "Board children OK!: {:?}",
         board.iter().all(|c| commands.get_entity(*c).is_some())
+      ),
+      &format!(
+        "Placed Blocks: {:?}",
+        q_placed_blocks
+          .iter()
+          .map(|block| block.translation)
+          .collect::<Vec<_>>()
+      ),
+      &format!(
+        "Food: {:?}",
+        q_food
+          .iter()
+          .map(|food| food.translation)
+          .collect::<Vec<_>>()
       ),
     ]
     .join("\n");

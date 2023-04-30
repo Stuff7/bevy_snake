@@ -25,7 +25,7 @@ pub mod components {
   use std::time::Duration;
 
   const FROZEN_SECONDS: u64 = 2;
-  const INVINCIBILITY_SECONDS: u64 = 5;
+  const INVINCIBILITY_SECONDS: u64 = 3;
 
   #[derive(Debug, Component, Default)]
   pub struct Swiftness(pub f32);
