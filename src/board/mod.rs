@@ -55,9 +55,16 @@ pub mod utils {
     Vec3::new(snap_to_axis(x), snap_to_axis(y), 0.)
   }
 
-  pub fn iter_cells(size: f32) -> impl Iterator<Item = f32> {
-    ((HALF_CELL_SIZE - size) as i32..size.ceil() as i32)
+  pub fn iter_cells_from_to(
+    from: f32,
+    to: f32,
+  ) -> impl Iterator<Item = f32> + DoubleEndedIterator + Clone {
+    ((from + HALF_CELL_SIZE) as i32..to.ceil() as i32)
       .step_by(CELL_SIZE as usize)
       .map(|i| snap_to_axis(i as f32))
+  }
+
+  pub fn iter_cells(size: f32) -> impl Iterator<Item = f32> + DoubleEndedIterator + Clone {
+    iter_cells_from_to(-size, size)
   }
 }

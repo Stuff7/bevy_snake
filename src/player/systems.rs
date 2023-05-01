@@ -3,11 +3,17 @@ use super::{
   events::RespawnPlayer,
   INITIAL_PLAYER_LENGTH, PLAYER_COLOR,
 };
-use crate::snake::{
-  components::{Direction, Living, Revive, SnakeBundle, SnakeConfig},
-  events::Serpentine,
+use crate::{
+  attributes::components::MoveCooldown,
+  snake::{
+    components::{Direction, Living, Revive, Snake, SnakeBundle, SnakeConfig},
+    events::Serpentine,
+  },
+  tetris::{components::TetrisBlock, events::TetrisMove},
 };
-use bevy::prelude::{Commands, Entity, EventReader, Input, KeyCode, Query, Res, With, Without};
+use bevy::prelude::{
+  Commands, Entity, EventReader, EventWriter, Input, KeyCode, Query, Res, With, Without,
+};
 
 pub(super) fn spawn(mut commands: Commands) {
   let player = (
@@ -29,7 +35,7 @@ pub(super) fn spawn(mut commands: Commands) {
 pub(super) fn respawn(
   mut commands: Commands,
   mut respawn_reader: EventReader<RespawnPlayer>,
-  mut q_player: Query<Entity, (With<Player>, Without<Living>)>,
+  mut q_player: Query<Entity, (With<Player>, With<Snake>, Without<Living>)>,
 ) {
   for _ in respawn_reader.iter() {
     let Ok(player) = q_player.get_single_mut() else {return};
@@ -37,9 +43,9 @@ pub(super) fn respawn(
   }
 }
 
-pub(super) fn queue_input(
+pub(super) fn queue_snake_input(
   keyboard_input: Res<Input<KeyCode>>,
-  mut q_player: Query<(&mut Direction, &mut DirectionQueue), With<Player>>,
+  mut q_player: Query<(&mut Direction, &mut DirectionQueue), (With<Player>, With<Snake>)>,
 ) {
   let Ok((mut direction, mut direction_queue)) = q_player.get_single_mut() else { return; };
 
@@ -67,9 +73,9 @@ pub(super) fn queue_input(
   }
 }
 
-pub(super) fn iter_input(
+pub(super) fn iter_snake_input(
   mut serpentine_reader: EventReader<Serpentine>,
-  mut q_player: Query<(&mut Direction, &mut DirectionQueue), With<Player>>,
+  mut q_player: Query<(&mut Direction, &mut DirectionQueue), (With<Player>, With<Snake>)>,
 ) {
   for snake in &mut serpentine_reader {
     let Ok((mut direction, mut direction_queue)) = q_player.get_mut(snake.0) else {continue};
@@ -78,6 +84,21 @@ pub(super) fn iter_input(
     let Some(next_direction) = direction_queue.next.take() else {continue};
     if should_take_next && next_direction != direction.opposite() {
       *direction = next_direction;
+    }
+  }
+}
+
+pub(super) fn tetris_input(
+  mut move_writer: EventWriter<TetrisMove>,
+  q_player: Query<(Entity, &MoveCooldown), (With<Player>, With<TetrisBlock>)>,
+  keyboard_input: Res<Input<KeyCode>>,
+) {
+  let Ok((player, move_cooldown)) = q_player.get_single() else {return};
+  if move_cooldown.0.finished() {
+    if keyboard_input.pressed(KeyCode::A) {
+      move_writer.send(TetrisMove::Left(player));
+    } else if keyboard_input.pressed(KeyCode::D) {
+      move_writer.send(TetrisMove::Right(player));
     }
   }
 }

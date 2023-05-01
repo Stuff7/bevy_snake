@@ -18,7 +18,8 @@ impl Plugin for EnemyPlugin {
       .add_system(systems::seek_food)
       .add_system(systems::seek_snake)
       .add_system(systems::seek_speed)
-      .add_system(systems::seek_nourishment);
+      .add_system(systems::seek_nourishment)
+      .add_system(systems::tetris_movement);
   }
 }
 
@@ -39,4 +40,7 @@ pub mod components {
 
   #[derive(Component)]
   pub struct Glutton;
+
+  #[derive(Component)]
+  pub struct TargetLocked;
 }

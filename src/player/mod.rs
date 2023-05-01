@@ -13,8 +13,9 @@ impl Plugin for PlayerPlugin {
       .add_event::<events::RespawnPlayer>()
       .add_startup_system(systems::spawn)
       .add_system(systems::respawn)
-      .add_system(systems::queue_input)
-      .add_system(systems::iter_input);
+      .add_system(systems::queue_snake_input)
+      .add_system(systems::iter_snake_input)
+      .add_system(systems::tetris_input);
   }
 }
 

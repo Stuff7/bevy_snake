@@ -1,20 +1,28 @@
 use super::{
-  components::{Enemy, Glutton, Killer, Omnivorous, Speedster},
+  components::{Enemy, Glutton, Killer, Omnivorous, Speedster, TargetLocked},
   GLUTTON_COLOR, INITIAL_ENEMY_LENGTH, KILLER_COLOR, OMNIVOROUS_COLOR, SPEEDSTER_COLOR,
 };
 use crate::{
-  board::resources::GameBoard,
+  attributes::components::MoveCooldown,
+  board::{
+    resources::GameBoard,
+    utils::{iter_cells, iter_cells_from_to},
+  },
   food::components::Food,
   snake::{
     components::{Living, Revive, Seeker, SnakeBundle, SnakeConfig},
     events::Serpentine,
   },
+  tetris::{
+    components::{BlockPart, BlockParts, Placed, TetrisBlock},
+    events::TetrisMove,
+  },
 };
 use bevy::{
   ecs::query::{ReadOnlyWorldQuery, WorldQuery},
   prelude::{
-    Changed, Color, Commands, Component, Entity, EventReader, Or, Query, Res, Transform, Vec3,
-    Visibility, With, Without,
+    Changed, Color, Commands, Component, Entity, EventReader, EventWriter, Or, Query, Res,
+    Transform, Vec3, Visibility, With, Without,
   },
 };
 use rand::random;
@@ -131,4 +139,44 @@ fn spawn_single_seeker<C: Component>(
     ),
   );
   commands.spawn(enemy);
+}
+
+pub(super) fn tetris_movement(
+  mut commands: Commands,
+  mut move_writer: EventWriter<TetrisMove>,
+  mut q_enemy: Query<
+    (Entity, &MoveCooldown, &BlockParts),
+    (With<Enemy>, With<TetrisBlock>, Without<TargetLocked>),
+  >,
+  q_block_parts: Query<&Transform, (With<BlockPart>, Without<Placed>, Without<TetrisBlock>)>,
+  q_placed_blocks: Query<&Transform, (With<Placed>, Without<BlockPart>, Without<TetrisBlock>)>,
+  game_board: Res<GameBoard>,
+) {
+  for (enemy, move_cooldown, parts) in &mut q_enemy {
+    if !move_cooldown.0.finished() {
+      continue;
+    }
+    let Some(bottom_part) = parts.0.iter()
+      .filter_map(|e| q_block_parts.get(*e).ok().map(|t| t.translation))
+      .min_by(|a, b| a.y.partial_cmp(&b.y).unwrap()) else {continue};
+    let mut cols = iter_cells(0.5 * game_board.width);
+    let Some(clear_col) = (loop {
+      let Some(x) = cols.next() else {break None};
+      if iter_cells_from_to(-0.5 * game_board.height, bottom_part.y)
+      .all(|y| {
+        let position = Vec3::new(x, y, 0.);
+        q_placed_blocks.iter().all(|c| c.translation != position)
+      }) {
+        break Some(x);
+      }
+    }) else {continue};
+    if clear_col == bottom_part.x {
+      commands.entity(enemy).insert(TargetLocked);
+      continue;
+    } else if clear_col > bottom_part.x {
+      move_writer.send(TetrisMove::Right(enemy));
+    } else if clear_col < bottom_part.x {
+      move_writer.send(TetrisMove::Left(enemy));
+    }
+  }
 }

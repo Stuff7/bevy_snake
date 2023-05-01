@@ -2,6 +2,7 @@ use crate::{
   attributes::components::{BaseColor, Brightness, MoveCooldown, Speed},
   board::{components::RandomCellPosition, resources::GameBoard, CELL_SIZE},
   effects::components::Invincibility,
+  enemy::components::TargetLocked,
   food::components::Food,
   scoreboard::components::{Score, ScoreEntity},
   snake::components::{SnakeBundle, SnakeConfig, Snakified},
@@ -58,8 +59,18 @@ pub(super) fn move_parts(
   mut commands: Commands,
   mut move_reader: EventReader<TetrisMove>,
   mut q_blocks: Query<&BlockParts, (With<TetrisBlock>, Without<Food>)>,
-  mut q_block_parts: Query<&mut Transform, (With<BlockPart>, Without<TetrisBlock>, Without<Food>)>,
+  mut q_block_parts: Query<
+    &mut Transform,
+    (
+      With<BlockPart>,
+      Without<Placed>,
+      Without<TetrisBlock>,
+      Without<Food>,
+    ),
+  >,
+  q_placed_blocks: Query<&Transform, (With<Placed>, Without<BlockPart>)>,
   q_food: Query<(Entity, &Transform), (With<Food>, Without<TetrisBlock>, Without<BlockPart>)>,
+  game_board: Res<GameBoard>,
 ) {
   for movement in &mut move_reader {
     let (entity, translation) = match *movement {
@@ -68,6 +79,14 @@ pub(super) fn move_parts(
       TetrisMove::Right(block) => (block, Vec3::new(CELL_SIZE, 0., 0.)),
     };
     let Ok(parts) = q_blocks.get_mut(entity) else {continue};
+    let half_width = game_board.width * 0.5;
+    if parts.0.iter().any(|p| {
+      let Ok(part) = q_block_parts.get(*p) else {return true};
+      let t = part.translation + translation;
+      t.x > half_width || t.x < -half_width || q_placed_blocks.iter().any(|p| p.translation == t)
+    }) {
+      continue;
+    }
     for part in &parts.0 {
       let Ok(mut part) = q_block_parts.get_mut(*part) else {continue};
       part.translation += translation;
@@ -120,6 +139,7 @@ pub(super) fn snakify(
       .entity(block)
       .remove::<TetrisBlockBundle>()
       .remove::<Snakified>()
+      .remove::<TargetLocked>()
       .insert((snake_bundle, Invincibility::new()));
   }
 }

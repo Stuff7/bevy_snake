@@ -10,13 +10,17 @@ rand = "0.8.5"
 version = "0.10.1"
 default-features = false
 features = [
-  "bevy_asset",
+  # 2D rendering
   "bevy_core_pipeline",
   "bevy_render",
   "bevy_sprite",
+  # Input, window, fonts
+  "bevy_winit",
+  "bevy_asset",
+  # UI
   "bevy_text",
   "bevy_ui",
-  "bevy_winit",
+  # Bloom
   "hdr",
   "ktx2",
   "tonemapping_luts",
