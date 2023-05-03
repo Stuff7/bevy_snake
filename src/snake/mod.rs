@@ -30,7 +30,6 @@ impl Plugin for SnakePlugin {
       .add_system(systems::grow)
       .add_system(systems::shrink)
       .add_system(systems::eat)
-      .add_system(systems::update_score)
       .add_system(systems::seek)
       .add_system(systems::disappear.run_if(on_timer(SERPENTINE_DURATION)))
       .add_system(systems::die)

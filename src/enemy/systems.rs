@@ -1,13 +1,10 @@
 use super::{
-  components::{Enemy, Glutton, Killer, Omnivorous, Speedster, TargetLocked},
+  components::{Enemy, Glutton, Killer, Omnivorous, Speedster, Target, TargetLocked},
   GLUTTON_COLOR, INITIAL_ENEMY_LENGTH, KILLER_COLOR, OMNIVOROUS_COLOR, SPEEDSTER_COLOR,
 };
 use crate::{
   attributes::components::MoveCooldown,
-  board::{
-    resources::GameBoard,
-    utils::{iter_cells, iter_cells_from_to},
-  },
+  board::{resources::GameBoard, utils::iter_cells, CELL_SIZE},
   food::components::Food,
   snake::{
     components::{Living, Revive, Seeker, SnakeBundle, SnakeConfig},
@@ -145,37 +142,61 @@ pub(super) fn tetris_movement(
   mut commands: Commands,
   mut move_writer: EventWriter<TetrisMove>,
   mut q_enemy: Query<
-    (Entity, &MoveCooldown, &BlockParts),
+    (Entity, &MoveCooldown, &BlockParts, Option<&Target>),
     (With<Enemy>, With<TetrisBlock>, Without<TargetLocked>),
   >,
   q_block_parts: Query<&Transform, (With<BlockPart>, Without<Placed>, Without<TetrisBlock>)>,
   q_placed_blocks: Query<&Transform, (With<Placed>, Without<BlockPart>, Without<TetrisBlock>)>,
   game_board: Res<GameBoard>,
 ) {
-  for (enemy, move_cooldown, parts) in &mut q_enemy {
+  for (enemy, move_cooldown, parts, target) in &mut q_enemy {
     if !move_cooldown.0.finished() {
       continue;
     }
-    let Some(bottom_part) = parts.0.iter()
-      .filter_map(|e| q_block_parts.get(*e).ok().map(|t| t.translation))
-      .min_by(|a, b| a.y.partial_cmp(&b.y).unwrap()) else {continue};
-    let mut cols = iter_cells(0.5 * game_board.width);
-    let Some(clear_col) = (loop {
-      let Some(x) = cols.next() else {break None};
-      if iter_cells_from_to(-0.5 * game_board.height, bottom_part.y)
-      .all(|y| {
-        let position = Vec3::new(x, y, 0.);
-        q_placed_blocks.iter().all(|c| c.translation != position)
-      }) {
-        break Some(x);
+    let parts = parts.0.iter().map(|e| {
+      q_block_parts
+        .get(*e)
+        .expect("Block parts not found")
+        .translation
+    });
+    let min = parts.clone().fold(f32::INFINITY, |a, b| a.min(b.x));
+    let max = parts.clone().fold(f32::NEG_INFINITY, |a, b| a.max(b.x)) + CELL_SIZE;
+    let target_section = match target {
+      Some(Target(target)) => *target,
+      None => {
+        if max <= min {
+          println!("Something went wrong calculating block width max_x: {max}, min_x: {min}");
+          continue;
+        }
+        let block_width = ((max - min) / CELL_SIZE) as usize;
+        let Some(target) = iter_cells(0.5 * game_board.width)
+          .collect::<Vec<_>>()
+          .windows(block_width)
+          .filter_map(|w| {
+            w.iter().next().map(|left_most| {
+              let max_height = w
+                .iter()
+                .map(|x| {
+                  q_placed_blocks
+                    .iter()
+                    .filter_map(|t| (t.translation.x == *x).then_some(t.translation.y))
+                    .fold(f32::NEG_INFINITY, |a, b| a.max(b))
+                })
+                .fold(f32::NEG_INFINITY, |a, b| a.max(b));
+              (*left_most, max_height)
+            })
+          })
+          .min_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
+          .map(|(left_most, _)| left_most) else {continue};
+        commands.entity(enemy).insert(Target(target));
+        target
       }
-    }) else {continue};
-    if clear_col == bottom_part.x {
+    };
+    if target_section == min {
       commands.entity(enemy).insert(TargetLocked);
-      continue;
-    } else if clear_col > bottom_part.x {
+    } else if target_section > min {
       move_writer.send(TetrisMove::Right(enemy));
-    } else if clear_col < bottom_part.x {
+    } else if target_section < min {
       move_writer.send(TetrisMove::Left(enemy));
     }
   }

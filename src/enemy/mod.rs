@@ -24,7 +24,7 @@ impl Plugin for EnemyPlugin {
 }
 
 pub mod components {
-  use bevy::prelude::Component;
+  use bevy::prelude::{Bundle, Component};
 
   #[derive(Component)]
   pub struct Enemy;
@@ -43,4 +43,13 @@ pub mod components {
 
   #[derive(Component)]
   pub struct TargetLocked;
+
+  #[derive(Component)]
+  pub struct Target(pub f32);
+
+  #[derive(Bundle)]
+  pub struct EnemyTetrisCleanupBundle {
+    target_locked: TargetLocked,
+    target: Target,
+  }
 }

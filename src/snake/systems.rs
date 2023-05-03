@@ -93,23 +93,27 @@ pub(super) fn resize(
   mut resize_reader: EventReader<SnakeResize>,
   mut q_snake: Query<
     (
+      &ScoreEntity,
       Option<&mut Nourishment>,
       Option<&mut Hunger>,
       Option<&Satiety>,
     ),
     (With<Living>, With<Snake>),
   >,
+  mut q_scores: Query<&mut Score>,
 ) {
   for (snake, resize) in &mut resize_reader {
-    let Ok((mut nourishment, mut hunger, satiety)) = q_snake.get_mut(*snake) else {continue};
+    let Ok((score_entity, mut nourishment, mut hunger, satiety)) = q_snake.get_mut(*snake) else {continue};
+    let Ok(mut score) = q_scores.get_mut(score_entity.0) else {continue};
     match *resize {
       BodyResize::Grow(n) => {
-        let satiety = satiety.map(|s| s.0).unwrap_or(1);
+        let satiety = n * satiety.map(|s| s.0).unwrap_or(1);
         if let Some(ref mut nourishment) = nourishment {
-          nourishment.0 += n * satiety;
+          nourishment.0 += satiety;
         } else {
-          commands.entity(*snake).insert(Nourishment(n * satiety));
+          commands.entity(*snake).insert(Nourishment(satiety));
         }
+        score.0 += satiety as i32;
       }
       BodyResize::Shrink(n) => {
         if let Some(ref mut hunger) = hunger {
@@ -117,6 +121,7 @@ pub(super) fn resize(
         } else {
           commands.entity(*snake).insert(Hunger(n));
         }
+        score.0 -= n as i32;
       }
     }
   }
@@ -204,21 +209,27 @@ pub(super) fn eat(
 pub(super) fn die(
   mut commands: Commands,
   mut serpentine_reader: EventReader<Serpentine>,
-  q_snake_head: Query<(Entity, &Transform, Option<&Invincibility>), (With<Snake>, With<Living>)>,
+  q_snake_head: Query<
+    (Entity, &ScoreEntity, &Transform, Option<&Invincibility>),
+    (With<Snake>, With<Living>),
+  >,
   q_solids: Query<&Transform, With<Solid>>,
+  mut q_scores: Query<&mut Score>,
 ) {
   for Serpentine(snake_entity, snake_head) in serpentine_reader.iter().copied() {
-    let Ok((_, _, invincible)) = q_snake_head.get(snake_entity) else {continue};
+    let Ok((_, score_entity, _, invincible)) = q_snake_head.get(snake_entity) else {continue};
     if invincible.is_none()
       && snake_crashed(
-        q_snake_head.iter().map(|h| (h.0, h.1.translation)),
+        q_snake_head.iter().map(|h| (h.0, h.2.translation)),
         q_solids.iter().map(|h| h.translation),
         snake_entity,
         snake_head,
       )
     {
       commands.entity(snake_entity).remove::<Living>();
-      return;
+      let Ok(mut score) = q_scores.get_mut(score_entity.0) else {continue};
+      score.0 = 0;
+      continue;
     }
   }
 }
@@ -255,18 +266,6 @@ pub(super) fn disappear(
       println!("☠️ {}", name.0);
       *visibility = Visibility::Hidden;
     }
-  }
-}
-
-pub(super) fn update_score(
-  mut serpentine_reader: EventReader<Serpentine>,
-  mut q_snakes: Query<(&SnakeBody, &ScoreEntity), With<Snake>>,
-  mut q_scores: Query<&mut Score>,
-) {
-  for serpentine in &mut serpentine_reader {
-    let Ok((body, score)) = q_snakes.get_mut(serpentine.0) else {continue};
-    let Ok(mut score) = q_scores.get_mut(score.0) else {continue};
-    score.0 = body.len();
   }
 }
 

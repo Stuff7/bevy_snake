@@ -26,7 +26,7 @@ pub mod components {
   pub struct Scoreboard;
 
   #[derive(Debug, Component)]
-  pub struct Score(pub usize);
+  pub struct Score(pub i32);
 
   #[derive(Debug, Component)]
   pub struct Place(pub f32);
@@ -52,7 +52,7 @@ pub mod utils {
   };
   use bevy::prelude::{BuildChildren, Color, Commands, Entity, NodeBundle, TextBundle};
 
-  pub fn spawn_score(commands: &mut Commands, score: usize, name: String, color: Color) -> Entity {
+  pub fn spawn_score(commands: &mut Commands, score: i32, name: String, color: Color) -> Entity {
     commands
       .spawn((
         Score(score),

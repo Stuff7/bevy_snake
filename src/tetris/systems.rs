@@ -2,7 +2,7 @@ use crate::{
   attributes::components::{BaseColor, Brightness, MoveCooldown, Speed},
   board::{components::RandomCellPosition, resources::GameBoard, CELL_SIZE},
   effects::components::Invincibility,
-  enemy::components::TargetLocked,
+  enemy::components::EnemyTetrisCleanupBundle,
   food::components::Food,
   scoreboard::components::{Score, ScoreEntity},
   snake::components::{SnakeBundle, SnakeConfig, Snakified},
@@ -126,7 +126,6 @@ pub(super) fn snakify(
       &mut commands,
       SnakeConfig {
         score: Some(score_entity.0),
-        tail_length: score.0,
         speed: speed.0,
         color: color.0,
         brightness: brightness.0,
@@ -139,7 +138,7 @@ pub(super) fn snakify(
       .entity(block)
       .remove::<TetrisBlockBundle>()
       .remove::<Snakified>()
-      .remove::<TargetLocked>()
+      .remove::<EnemyTetrisCleanupBundle>()
       .insert((snake_bundle, Invincibility::new()));
   }
 }

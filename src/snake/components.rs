@@ -54,9 +54,14 @@ pub struct SnakeBundle {
 
 impl SnakeBundle {
   pub fn new(commands: &mut Commands, config: SnakeConfig) -> Self {
-    let score = config
-      .score
-      .unwrap_or_else(|| spawn_score(commands, config.tail_length, config.name, config.color));
+    let score = config.score.unwrap_or_else(|| {
+      spawn_score(
+        commands,
+        config.tail_length as i32,
+        config.name,
+        config.color,
+      )
+    });
     Self {
       snake: Snake,
       score: ScoreEntity(score),
@@ -162,10 +167,6 @@ impl SnakeBody {
         })
         .collect(),
     )
-  }
-
-  pub fn len(&self) -> usize {
-    self.0.len()
   }
 
   pub fn head(&self) -> Option<Entity> {
