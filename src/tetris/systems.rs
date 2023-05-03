@@ -1,6 +1,10 @@
 use crate::{
   attributes::components::{BaseColor, Brightness, MoveCooldown, Speed},
-  board::{components::RandomCellPosition, resources::GameBoard, CELL_SIZE},
+  board::{
+    components::{Cell, RandomCellPosition},
+    resources::GameBoard,
+    CELL_SIZE,
+  },
   effects::components::Invincibility,
   enemy::components::EnemyTetrisCleanupBundle,
   food::components::Food,
@@ -68,7 +72,7 @@ pub(super) fn move_parts(
       Without<Food>,
     ),
   >,
-  q_placed_blocks: Query<&Transform, (With<Placed>, Without<BlockPart>)>,
+  q_cells: Query<&Transform, (With<Cell>, Without<BlockPart>)>,
   q_food: Query<(Entity, &Transform), (With<Food>, Without<TetrisBlock>, Without<BlockPart>)>,
   game_board: Res<GameBoard>,
 ) {
@@ -80,10 +84,19 @@ pub(super) fn move_parts(
     };
     let Ok(parts) = q_blocks.get_mut(entity) else {continue};
     let half_width = game_board.width * 0.5;
-    if parts.0.iter().any(|p| {
-      let Ok(part) = q_block_parts.get(*p) else {return true};
-      let t = part.translation + translation;
-      t.x > half_width || t.x < -half_width || q_placed_blocks.iter().any(|p| p.translation == t)
+    let parts_translations = parts
+      .0
+      .iter()
+      .filter_map(|e| q_block_parts.get(*e).ok().map(|t| t.translation))
+      .collect::<Vec<_>>();
+    if parts_translations.iter().any(|p| {
+      let t = *p + translation;
+      t.x > half_width || t.x < -half_width || {
+        q_cells
+          .iter()
+          .filter(|c| parts_translations.contains(&c.translation))
+          .any(|c| c.translation == t)
+      }
     }) {
       continue;
     }
