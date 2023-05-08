@@ -24,7 +24,7 @@ pub mod components {
   };
   use std::time::Duration;
 
-  const FROZEN_SECONDS: u64 = 2;
+  const FROZEN_SECONDS: u64 = 1;
   const INVINCIBILITY_SECONDS: u64 = 3;
 
   #[derive(Debug, Component, Default)]
@@ -40,7 +40,7 @@ pub mod components {
     pub fn new() -> Self {
       Self {
         level: 1,
-        cooldown: Timer::new(Duration::from_secs(FROZEN_SECONDS), TimerMode::Once),
+        cooldown: Timer::new(Duration::from_millis(FROZEN_SECONDS), TimerMode::Once),
       }
     }
 

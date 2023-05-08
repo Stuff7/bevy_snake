@@ -142,15 +142,25 @@ pub(super) fn tetris_movement(
   mut commands: Commands,
   mut move_writer: EventWriter<TetrisMove>,
   mut q_enemy: Query<
-    (Entity, &MoveCooldown, &BlockParts, Option<&Target>),
-    (With<Enemy>, With<TetrisBlock>, Without<TargetLocked>),
+    (
+      Entity,
+      &MoveCooldown,
+      &BlockParts,
+      Option<&Target>,
+      Option<&TargetLocked>,
+    ),
+    (With<Enemy>, With<TetrisBlock>),
   >,
   q_block_parts: Query<&Transform, (With<BlockPart>, Without<Placed>, Without<TetrisBlock>)>,
   q_placed_blocks: Query<&Transform, (With<Placed>, Without<BlockPart>, Without<TetrisBlock>)>,
   game_board: Res<GameBoard>,
 ) {
-  for (enemy, move_cooldown, parts, target) in &mut q_enemy {
+  for (enemy, move_cooldown, parts, target, is_locked) in &mut q_enemy {
     if !move_cooldown.0.finished() {
+      continue;
+    }
+    if is_locked.is_some() {
+      move_writer.send(TetrisMove::Down(enemy));
       continue;
     }
     let parts = parts.0.iter().map(|e| {

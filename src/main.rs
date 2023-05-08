@@ -22,7 +22,7 @@ fn main() {
     .add_plugins(DefaultPlugins.set(WindowPlugin {
       primary_window: Some(Window {
         title: "Snake".into(),
-        resolution: (800., 800.).into(),
+        resolution: (600., 800.).into(),
         present_mode: PresentMode::AutoVsync,
         ..Default::default()
       }),

@@ -9,7 +9,7 @@ use super::{
 use crate::{
   attributes::components::{BaseColor, Brightness, ColorBundle, MoveCooldown, Solid, Speed},
   board::{
-    components::{DyingCell, RandomCellPosition},
+    components::{CellCollider, DyingCell, RandomCellPosition},
     resources::GameBoard,
     CELL_SIZE, HALF_CELL_SIZE,
   },
@@ -245,6 +245,7 @@ pub(super) fn revive(
       .entity(snake)
       .remove::<Revive>()
       .insert(Living)
+      .insert(CellCollider)
       .insert(Swiftness(0.))
       .insert(Nourishment(4));
   }
@@ -253,17 +254,18 @@ pub(super) fn revive(
 pub(super) fn disappear(
   mut commands: Commands,
   mut q_snakes: Query<
-    (&ScoreEntity, &mut Visibility, &mut SnakeBody),
+    (Entity, &ScoreEntity, &mut Visibility, &mut SnakeBody),
     (With<Snake>, Without<Living>),
   >,
   q_scores: Query<&Name, With<Score>>,
 ) {
-  for (score, mut visibility, mut body) in &mut q_snakes {
+  for (entity, score, mut visibility, mut body) in &mut q_snakes {
     let Ok(name) = q_scores.get(score.0) else {return};
     if let Some(tail) = body.pop_tail() {
       commands.entity(tail).insert(DyingCell);
     } else if *visibility != Visibility::Hidden {
       println!("☠️ {}", name.0);
+      commands.entity(entity).remove::<CellCollider>();
       *visibility = Visibility::Hidden;
     }
   }

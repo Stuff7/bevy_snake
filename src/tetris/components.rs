@@ -13,6 +13,9 @@ pub struct TetrisBlock;
 pub struct Placed;
 
 #[derive(Debug, Component)]
+pub struct FreeFall;
+
+#[derive(Debug, Component)]
 pub struct BlockPart;
 
 #[derive(Bundle)]

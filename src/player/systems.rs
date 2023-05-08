@@ -99,6 +99,8 @@ pub(super) fn tetris_input(
       move_writer.send(TetrisMove::Left(player));
     } else if keyboard_input.pressed(KeyCode::D) {
       move_writer.send(TetrisMove::Right(player));
+    } else if keyboard_input.pressed(KeyCode::S) {
+      move_writer.send(TetrisMove::Down(player));
     }
   }
 }
